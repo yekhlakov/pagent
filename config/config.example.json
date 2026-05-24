@@ -1,0 +1,31 @@
+{
+  "agent": {
+    "timezone": "Asia/Beijing"
+ },
+    "gitlab": {
+        "project_id": "666", 
+        "baseUrl": "https://gitlab.com/api/v4/",
+        "accessToken": "12345"
+    },
+    "jira": {
+        "apiUrl": "https://jira.com/",
+        "apiToken": "123456",
+        "customFieldMap": {
+		"definition_of_done"         : "customfield_12715",
+		"test_plan"                  : "customfield_14241"
+	}
+    },
+
+    "filesystem": {
+	"root_directory": "c:/work/project1"
+    },
+
+
+	"llm": {
+		"local": {
+			"baseUrl": "http://127.0.0.1:12345/v1/",
+			"authToken": "x",
+			"model": "gemma-4-E4B-it-Q6_K_XL.gguf"
+		}
+	}
+}

@@ -1,0 +1,7 @@
+.git
+.editorconfig
+config/config.json
+output/*
+file-cache.json
+pint.json
+vendor

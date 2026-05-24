@@ -1,0 +1,17 @@
+{
+    "name": "yekhlakov/pagent",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Yekhlakov\\PAgent\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Max Yekhlakov",
+            "email": "yekhlakov@gmail.com"
+        }
+    ],
+    "require": {}
+}
