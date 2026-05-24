@@ -51,6 +51,86 @@ trait Filesystem
     }
 
     /**
+     * Lists the contents of a specified directory.
+     *
+     * @param  string  $dirName  The relative path to the directory.
+     * @return bool True on success, false on failure.
+     */
+    #[LlmTool([
+        'type' => 'function',
+        'function' => [
+            'description' => 'Lists all files and subdirectories within a specified directory.',
+            'name' => 'fdir',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => [
+                    'dirName' => ['type' => 'string', 'description' => 'The path to the directory to list (e.g., "data").'],
+                ],
+                'required' => ['dirName'],
+            ],
+        ],
+    ])]
+    public function executeFdir(string $dirName): bool
+    {
+        $absolutePath = $this->getAbsoluteFilePath($dirName);
+
+        if (! is_dir($absolutePath)) {
+            $this->current_context .= "!!! Error: Directory '$dirName' does not exist or is not a directory. !!!\n";
+
+            return false;
+        }
+
+        $entries = scandir($absolutePath);
+        $directories = [];
+        $files = [];
+
+        if ($entries === false) {
+            $this->current_context .= "!!! Error: Could not read contents of directory '$dirName'. Check permissions. !!!\n";
+
+            return false;
+        }
+
+        // Filter out '.' and '..' and categorize entries
+        $filteredEntries = array_diff($entries, ['.', '..']);
+
+        foreach ($filteredEntries as $entryName) {
+            $fullPath = $absolutePath.'/'.$entryName;
+            if (is_dir($fullPath)) {
+                $directories[] = $fullPath;
+            } else {
+                $files[] = $fullPath;
+            }
+        }
+
+        // Format output: Directories first, then Files
+        $output = "\n=== Directory contents for '$dirName' ===\n";
+
+        // 1. Directories
+        $output .= "\n--- Directories ---\n";
+        if (empty($directories)) {
+            $output .= "No subdirectories found.\n";
+        } else {
+            foreach ($directories as $dir) {
+                $output .= "DIRECTORY: $dir\n";
+            }
+        }
+
+        // 2. Files
+        $output .= "\n--- Files ---\n";
+        if (empty($files)) {
+            $output .= "No files found.\n";
+        } else {
+            foreach ($files as $file) {
+                $output .= "FILE: $file\n";
+            }
+        }
+
+        $this->current_context .= $output."\n";
+
+        return true;
+    }
+
+    /**
      * Reads the content of a file from the local filesystem.
      *
      * @param  string  $fileName  The relative file path.
@@ -88,8 +168,7 @@ trait Filesystem
                 return null;
             }
 
-            $this->current_context .= "=== The file '$fileName' contents follow ===\n" . $content . "\n";
-
+            $this->current_context .= "=== The file '$fileName' contents follow ===\n".$content."\n";
 
             return true;
         } catch (\Exception $e) {
@@ -116,7 +195,7 @@ trait Filesystem
                 'properties' => [
                     'fileName' => ['type' => 'string', 'description' => 'The relative path to the file.'],
                     'content' => ['type' => 'string', 'description' => 'The complete content to write to the file.'],
-		    'finish' => ['type' => 'boolean', 'description' => "If you have nothing to do after the write, set this task to finish your work"],
+                    'finish' => ['type' => 'boolean', 'description' => 'If you have nothing to do after the write, set this task to finish your work'],
                 ],
                 'required' => ['fileName', 'content'],
             ],
@@ -132,7 +211,7 @@ trait Filesystem
             if ($success !== false) {
                 $this->current_context .= "=== Successfully wrote content to file '$fileName'. ===\n\n";
 
-                return !$finish;
+                return ! $finish;
             } else {
                 $this->current_context .= "!!! Error: Failed to write content to file '$fileName'. Check permissions or path. !!!\n";
 
@@ -166,7 +245,7 @@ trait Filesystem
                     'startLine' => ['type' => 'integer', 'description' => 'The first line number to replace (default is 1).'],
                     'endLine' => ['type' => 'integer', 'description' => 'The last line number to replace (default is the last line).'],
                     'content' => ['type' => 'string', 'description' => 'The new content to write over the replaced fragment. Use an empty string ("") to delete the fragment.'],
-		    'finish' => ['type' => 'boolean', 'description' => "If you have nothing to do after the write, set this task to finish your work"],
+                    'finish' => ['type' => 'boolean', 'description' => 'If you have nothing to do after the write, set this task to finish your work'],
                 ],
                 'required' => ['fileName', 'content'],
             ],
@@ -191,6 +270,7 @@ trait Filesystem
             }
 
             // Split into lines, preserving the structure
+            // Note: Using "\n" for splitting and "\n" for joining assumes standard Unix line endings.
             $lines = explode("\n", $originalContent);
             $totalLines = count($lines);
 
@@ -230,7 +310,7 @@ trait Filesystem
             if ($success !== false) {
                 $this->current_context .= "=== Successfully patched file '$fileName' from line $startLine to $endLine. ===\n\n";
 
-                return !$finish;
+                return ! $finish;
             } else {
                 $this->current_context .= "!!! Error: Failed to write patched content to '$fileName'. !!!\n";
 
