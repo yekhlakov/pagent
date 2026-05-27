@@ -177,6 +177,13 @@ If the information provided to you by the user is insufficient to perform your t
 
         echo "--------------- Agent {$this->id} Started ---------------\n";
 
+	$localToolSet = $this->getToolSet();
+
+	$localTools = array_map(fn($x) => $x['function']['name'], $localToolSet);
+
+        echo '--------------- '.count($localTools)." tools are enabled for session ---------------\n";
+        echo '['.implode(', ', $localTools)."]\n\n";
+
         // The loop continues as long as the command router returns a non-empty result.
         while (true) {
 
@@ -192,7 +199,7 @@ If the information provided to you by the user is insufficient to perform your t
             echo "--------------- Agent {$this->id} is issuing query to LLM ---------------\n";
 
             // 1. Call LLM API
-            $result = $this->llmApi->send($currentQuery, $this->tools);
+            $result = $this->llmApi->send($currentQuery, $localToolSet);
 
             $queryCount++;
 

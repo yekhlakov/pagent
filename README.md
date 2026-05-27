@@ -1,53 +1,55 @@
-# Agent System Documentation
+# PAgent System Description
 
-## 🚀 Overview
-This document describes the architecture and operation of the `Agent` class, an autonomous AI system designed to execute complex, multi-step tasks based on a single initial user query. It functions as a closed-loop reasoning engine, leveraging external tools and a Large Language Model (LLM) to achieve its goals.
+## 📝 Overview
+The PAgent is a sophisticated, loop-based AI agent designed to autonomously process complex user tasks by interacting with various external systems and leveraging a Large Language Model (LLM). Its primary purpose is to act as an intelligent system, capable of planning, executing tool calls (like interacting with Gitlab or Jira), managing conversational context, and producing a final, structured result for the user.
 
-## ⚙️ Principles of Operation (The Agent Loop)
+## ⚙️ Principles of Operation
 
-The agent operates via a continuous, iterative process defined in the `handle(string $query)` method:
+The agent operates using a reactive loop (`handle` method) which mimics the cognitive cycle of an intelligent agent:
 
-1.  **Initialization:** The agent begins by setting up a unique, timestamped output directory and loading all necessary configurations, including the system prompt and API credentials.
-2.  **Context Building:** In each cycle, the agent constructs a comprehensive query package by combining:
-    *   The static **System Prompt** (defining its role and constraints).
-    *   The **User Task** (the original goal provided by the user).
-    *   The **Current Context** (a running log of all previous reasoning, actions, and tool calls).
-    *   Any **Saved Files** (retrieved from the file cache).
-3.  **LLM Query:** This entire context package is sent to the configured LLM API (`$this->llmApi->send(...)`).
-4.  **Response Processing & Reasoning:** The agent parses the LLM response:
-    *   It extracts the **Reasoning Content**, appending it to the `current_context`.
-    *   It identifies any **Tool Calls** requested by the LLM.
-    *   It logs the details of these tool calls in the `current_context`.
-5.  **Action Execution/Routing:** The agent uses a router mechanism (`$this->parseLlmResponse()`) to determine the next step—whether to execute a tool, generate a final answer, or continue the loop.
-6.  **Termination:** The loop terminates when the router signals that no further action is required, indicating task completion.
+1.  **Initialization:** Upon construction, the agent sets up its unique session ID, initializes its internal state (memory, context), and establishes connections to all required external APIs (LLM, Gitlab, Jira). It also loads system prompts and configuration settings.
+2.  **Task Execution Loop:**
+    *   The agent continuously queries the LLM, providing it with the current system prompt, the user's initial task, the accumulated conversation context, and a list of available tools.
+    *   The LLM responds, which may contain two types of information:
+        *   **Reasoning:** The LLM's thought process, which is added to the agent's context.
+        *   **Tool Calls:** Instructions to execute external functions (e.g., `Gitlab`, `Jira`, `Filesystem`).
+    *   The agent processes these tool calls, executes the necessary functions (managed by traits like `Gitlab` and `Jira`), and feeds the results back into the context for the next LLM query.
+    *   This loop continues until the `ToolCallRouterTrait` determines that the LLM response is complete and a final result has been generated.
+3.  **State Management:** The agent maintains internal state, including a `memory` array and a `current_context`, ensuring continuity across multiple LLM interactions. It also features file caching capabilities (`Cache` trait) to persist and recover state.
 
-## 🔑 Required Configuration Variables
+## 🛠️ Components and Traits
 
-The agent is highly dependent on a configuration file, typically `config/config.json`. This file must define parameters for the Agent's behavior, the LLM provider, and the external services it interacts with (GitLab and Jira).
+The `Yekhlakov\PAgent\Agent` class relies heavily on several integrated traits and API wrappers to achieve its functionality:
 
-### Configuration Structure:
+*   **`LlmApi`:** Handles communication with the chosen Large Language Model.
+*   **`GitlabApi`:** Provides integration and tools for interacting with GitLab resources.
+*   **`JiraApi`:** Provides integration and tools for interacting with Jira resources.
+*   **`ToolCallRouterTrait`:** Manages the parsing and routing of instructions received from the LLM to the correct underlying tools.
+*   **`Cache`:** Manages the persistence of files and agent state.
+*   **`Filesystem`:** Provides low-level file system interaction capabilities.
+*   **`Finish`:** Likely handles the specific logic for determining when the agent's task is complete.
 
-**1. Agent Configuration (`agent` section):**
-*   `timezone`: The timezone used for internal timestamping (e.g., `'UTC'`).
-*   `system-prompt`: The default text prompt defining the agent's persona and rules.
-*   `system-prompt-file`: (Optional) Path to an external file that overrides the default system prompt.
+## 🗄️ Required Configuration Variables
 
-**2. LLM Configuration (`llm` section):**
-*   This section is provider-specific and must be structured to allow dynamic switching of LLM services.
-*   For a chosen LLM provider, the following parameters are required:
-    *   `baseUrl`: The API endpoint URL.
-    *   `authToken`: The necessary authentication token/key.
-    *   `model`: The specific model identifier (e.g., `'gpt-4'`).
+The agent requires a configuration file, typically `config/config.json`, which must be structured to define all operational parameters. Key configuration areas include:
 
-**3. GitLab Configuration (`gitlab` section):**
-*   `baseUrl`: The base URL for the GitLab instance.
-*   `accessToken`: The API access token for GitLab authentication.
-*   `project_id`: The ID of the specific GitLab project the agent is scoped to.
+1.  **`agent`**:
+    *   `timezone`: The timezone used for internal timestamping (e.g., 'UTC').
+    *   `system-prompt`: The default instruction set for the AI agent, which can be overridden by a file path (`system-prompt-file`).
+2.  **`gitlab`**:
+    *   `baseUrl`: The base URL of the GitLab instance.
+    *   `accessToken`: The authentication token for GitLab.
+    *   `project_id`: The ID of the GitLab project the agent should operate within.
+3.  **`jira`**:
+    *   `apiUrl`: The base URL of the Jira instance.
+    *   `apiToken`: The authentication token for Jira.
+    *   `customFieldMap`: A map defining how custom Jira fields should be handled.
+4.  **`llm`**:
+    *   This section must define configurations for one or more LLM providers.
+    *   For the selected LLM (specified by the `llm` parameter, e.g., 'local'), it requires:
+        *   `baseUrl`: The API endpoint for the LLM.
+        *   `authToken`: The authorization token for the LLM.
+        *   `model`: The specific model name to be used.
 
-**4. Jira Configuration (`jira` section):**
-*   `apiUrl`: The base URL for the Jira instance.
-*   `apiToken`: The API token required for Jira authentication.
-*   `customFieldMap`: (Optional) A mapping array used to handle specific Jira custom fields.
-
-
-*This README was written by this agent itself, see the file `run-agent.php` included in this repo*
+***
+*This description was generated by an AI agent.*

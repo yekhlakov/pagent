@@ -59,7 +59,7 @@ trait Filesystem
     #[LlmTool([
         'type' => 'function',
         'function' => [
-            'description' => 'Lists all files and subdirectories within a specified directory.',
+            'description' => 'Lists all files and subdirectories within a specified directory in the local file system. Don`t query directory names like `.` and `..`!',
             'name' => 'fdir',
             'parameters' => [
                 'type' => 'object',
@@ -75,7 +75,7 @@ trait Filesystem
         $absolutePath = $this->getAbsoluteFilePath($dirName);
 
         if (! is_dir($absolutePath)) {
-            $this->current_context .= "!!! Error: Directory '$dirName' does not exist or is not a directory. !!!\n";
+            $this->current_context .= "!!! Error: Directory '$dirName' does not exist in the local file system or is not a directory. !!!\n";
 
             return false;
         }
@@ -85,7 +85,7 @@ trait Filesystem
         $files = [];
 
         if ($entries === false) {
-            $this->current_context .= "!!! Error: Could not read contents of directory '$dirName'. Check permissions. !!!\n";
+            $this->current_context .= "!!! Error: Could not read contents of directory '$dirName' in local file system. Check permissions. !!!\n";
 
             return false;
         }
@@ -103,7 +103,7 @@ trait Filesystem
         }
 
         // Format output: Directories first, then Files
-        $output = "\n=== Directory contents for '$dirName' ===\n";
+        $output = "\n=== Directory contents for '$dirName' (in local file system) ===\n";
 
         // 1. Directories
         $output .= "\n--- Directories ---\n";
@@ -131,51 +131,57 @@ trait Filesystem
     }
 
     /**
-     * Reads the content of a file from the local filesystem.
+     * Reads the content of one or more files from the local filesystem sequentially.
      *
-     * @param  string  $fileName  The relative file path.
-     * @return string|null The content of the file, or null if the file is not found.
+     * @param  array  $fileNames  An array of relative file paths.
+     * @return bool True if all files were read successfully, false otherwise.
      */
     #[LlmTool([
         'type' => 'function',
         'function' => [
-            'description' => 'Reads the content of a specified file from the local filesystem.',
+            'description' => 'Reads the content of one or more specified files from the local filesystem sequentially.',
             'name' => 'fread',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
-                    'fileName' => ['type' => 'string', 'description' => 'The relative path to the file (e.g., "data/file.txt").'],
+                    'fileNames' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'string'],
+                        'description' => 'An array of relative paths to the files (e.g., ["data/file1.txt", "data/file2.txt"]).',
+                    ],
                 ],
-                'required' => ['fileName'],
+                'required' => ['fileNames'],
             ],
         ],
     ])]
-    public function executeFread(string $fileName): ?string
+    public function executeFread(array $fileNames): bool
     {
-        $absolutePath = $this->getAbsoluteFilePath($fileName);
+	echo "FREAD called with " . json_encode($fileNames) . "\n";
 
-        if (! file_exists($absolutePath)) {
-            $this->current_context .= "!!! Error: File '$fileName' does not exist at the specified path. !!!\n";
+        foreach ($fileNames as $fileName) {
+            $absolutePath = $this->getAbsoluteFilePath($fileName);
 
-            return null;
-        }
+            if (! file_exists($absolutePath)) {
+                $this->current_context .= "!!! Error: File '$fileName' does not exist at the specified path. !!!\n";
 
-        try {
-            $content = file_get_contents($absolutePath);
-            if ($content === false) {
-                $this->current_context .= "!!! Error: Could not read the content of file '$fileName'. !!!\n";
-
-                return null;
+                continue;
             }
 
-            $this->current_context .= "=== The file '$fileName' contents follow ===\n".$content."\n";
+            try {
+                $content = file_get_contents($absolutePath);
+                if ($content === false) {
+                    $this->current_context .= "!!! Error: Could not read the content of file '$fileName'. !!!\n";
 
-            return true;
-        } catch (\Exception $e) {
-            $this->current_context .= "!!! Exception occurred while reading '$fileName': ".$e->getMessage()." !!!\n";
+                    continue;
+                }
 
-            return null;
+                $this->current_context .= "=== The file '$fileName' contents follow ===\n".$content."\n";
+            } catch (\Exception $e) {
+                $this->current_context .= "!!! Exception occurred while reading '$fileName': ".$e->getMessage()." !!!\n";
+            }
         }
+
+        return true;
     }
 
     /**
@@ -215,12 +221,12 @@ trait Filesystem
             } else {
                 $this->current_context .= "!!! Error: Failed to write content to file '$fileName'. Check permissions or path. !!!\n";
 
-                return false;
+                return false; // Fatal error, cannot proceed
             }
         } catch (\Exception $e) {
             $this->current_context .= "!!! Exception occurred while writing to '$fileName': ".$e->getMessage()." !!!\n";
 
-            return false;
+                return false; // Fatal error, cannot proceed
         }
     }
 
@@ -236,7 +242,7 @@ trait Filesystem
     #[LlmTool([
         'type' => 'function',
         'function' => [
-            'description' => 'Modifies a segment of an existing file. The replacement starts at startLine and ends at endLine. If content is empty, the segment is deleted.',
+            'description' => 'Modifies a segment of an existing file in the local file system. The replacement starts at startLine and ends at endLine. If content is empty, the segment is deleted.',
             'name' => 'fpatch',
             'parameters' => [
                 'type' => 'object',
@@ -258,7 +264,7 @@ trait Filesystem
         if (! file_exists($absolutePath)) {
             $this->current_context .= "!!! Error: File '$fileName' does not exist. Cannot patch. !!!\n";
 
-            return false;
+                return false; // Fatal error, cannot proceed
         }
 
         try {
@@ -266,11 +272,10 @@ trait Filesystem
             if ($originalContent === false) {
                 $this->current_context .= "!!! Error: Could not read file '$fileName' for patching. !!!\n";
 
-                return false;
+                return false; // Fatal error, cannot proceed
             }
 
             // Split into lines, preserving the structure
-            // Note: Using "\n" for splitting and "\n" for joining assumes standard Unix line endings.
             $lines = explode("\n", $originalContent);
             $totalLines = count($lines);
 
@@ -286,7 +291,7 @@ trait Filesystem
             if ($startLine > $endLine) {
                 $this->current_context .= "!!! Error: Invalid line range specified for patching (startLine > endLine). !!!\n";
 
-                return false;
+                return false; // Fatal error, cannot proceed
             }
 
             // The lines array is 0-indexed, so we adjust indices.
@@ -310,17 +315,17 @@ trait Filesystem
             if ($success !== false) {
                 $this->current_context .= "=== Successfully patched file '$fileName' from line $startLine to $endLine. ===\n\n";
 
-                return ! $finish;
+                return ! $finish; // Return false if we're requested to finish work and true otherwise
             } else {
                 $this->current_context .= "!!! Error: Failed to write patched content to '$fileName'. !!!\n";
 
-                return false;
+                return false; // Fatal error, cannot proceed
             }
 
         } catch (\Exception $e) {
             $this->current_context .= "!!! Exception occurred while patching '$fileName': ".$e->getMessage()." !!!\n";
 
-            return false;
+                return false; // Fatal error, cannot proceed
         }
     }
 }

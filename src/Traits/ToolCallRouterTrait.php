@@ -2,35 +2,73 @@
 
 namespace Yekhlakov\PAgent\Traits;
 
+use ReflectionClass;
 use Yekhlakov\PAgent\Attributes\LlmTool;
 
 trait ToolCallRouterTrait
 {
-    // This will be sent to llm
-    public array $tools = [];
+    /**
+     * @var array<string, array{key: string, description: array, method: string, tag: string}>
+     *                                                                                         This set holds all tool metadata, keyed by tool name.
+     */
+    public array $toolSet = [];
 
-    // This maps tool name to handler method
-    public array $tool_handlers = [];
+    /**
+     * @var array<string>|null
+     *                         List of tool names or tags enabled for use.
+     */
+    public ?array $enabledTools = null;
+
+    /**
+     * Determines the name of the trait this method is declared in (converted to snake_case).
+     */
+    protected function getTraitForMethod(string $methodName): ?string
+    {
+        // Note: We must use $this->getTraitForMethod() inside a class context,
+        // but since this is a trait, we rely on the class that uses it.
+        // For simplicity and adherence to the prompt, we assume $this context is available.
+        $reflection = new ReflectionClass($this);
+
+        foreach ($reflection->getTraits() as $trait) {
+            if ($trait->hasMethod($methodName)) {
+                return $trait->getName();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Converts a CamelCase trait name to snake_case.
+     * e.g., ToolCallRouterTrait -> tool_call_router_trait
+     */
+    protected function toSnakeCase(string $className): string
+    {
+        // Remove Trait suffix if present
+        $baseName = str_replace('Trait', '', $className);
+
+        // Convert CamelCase to snake_case
+        return strtolower(preg_replace('/(?<=[a-z])(?=[A-Z])/', '_', $baseName));
+    }
 
     public function initRouter(): void
     {
         // 1. Reflect $this
-        $reflection = new \ReflectionClass($this);
+        $reflection = new ReflectionClass($this);
 
-        // 2. Iterate over all public methods
-        // We use getMethods() and filter for public visibility
+        // 2. Iterate over all methods
         foreach ($reflection->getMethods() as $method) {
 
-            // Skip private/protected methods (though reflection usually handles visibility checks)
+            // Skip private/protected methods
             if (! $method->isPublic()) {
                 continue;
             }
 
-            // 3. Check for the QueryHandler attribute
+            // 3. Check for the LlmTool attribute
             $attributes = $method->getAttributes(LlmTool::class);
 
             if (! empty($attributes)) {
-                // We assume only one QueryHandler attribute per method for simplicity
+                // We assume only one LlmTool attribute per method
                 $attribute = $attributes[0];
 
                 // Instantiate the attribute to access its properties
@@ -44,11 +82,16 @@ trait ToolCallRouterTrait
                 // Get the method name
                 $methodName = $method->getName();
 
-                if (! empty($this->tool_handlers[$key])) {
+                // Determine the trait name and convert it to snake_case
+                $traitName = $this->getTraitForMethod($methodName);
+                $tag = $traitName ? $this->toSnakeCase(basename($traitName)) : 'unknown';
+
+                // Check for duplicates
+                if (isset($this->toolSet[$key])) {
                     echo "!!!!!!!!!!!!!!!!!!! Duplicate tools detected !!!!!!!!!!!!!!!!!!!!!!\n\ttool\tmethod\n\t----\t------\n";
 
-                    foreach ($this->tool_handlers as $k => $v) {
-                        echo "\t$k\t$v".($k == $key ? ' <------ ' : '')."\n";
+                    foreach ($this->toolSet as $k => $v) {
+                        echo "\t$k\t{$v['method']}".($k == $key ? ' <------ ' : '')."\n";
                     }
 
                     echo "\t$key\t$methodName <------\n";
@@ -56,13 +99,18 @@ trait ToolCallRouterTrait
                     exit();
                 }
 
-                $this->tools[] = $description;
-                $this->tool_handlers[$key] = $methodName;
+                // Populate the new $toolSet structure
+                $this->toolSet[$key] = [
+                    'key' => $key,
+                    'description' => $description,
+                    'method' => $methodName,
+                    'tag' => $tag,
+                ];
             }
         }
 
-        echo '--------------- '.count($this->tools)." tools are available ---------------\n";
-        echo '['.implode(', ', array_keys($this->tool_handlers))."]\n\n";
+        echo '--------------- '.count($this->toolSet)." tools are available ---------------\n";
+        echo '['.implode(', ', array_keys($this->toolSet))."]\n\n";
     }
 
     public function cleanValue($value): string
@@ -72,13 +120,13 @@ trait ToolCallRouterTrait
 
     public function parseLlmResponse(array $response)
     {
-        $this->result = $response['content'];
+        $this->result = $response['content'] ?? null;
 
         if (empty($response['tool_calls'])) {
             echo "\n\n----------------- No tool calls are returned, which means it has finished the task. ----------------------\n";
             echo "\n\n----------------- Here is the result: ----------------------\n";
 
-            echo $response['content']."\n\n";
+            echo $response['content'] ?? "\n";
 
             return false;
         }
@@ -91,19 +139,73 @@ trait ToolCallRouterTrait
 
             echo "------------------------ Processing tool call `$function` ------------------------\n";
 
-            $method = $this->tool_handlers[$function] ?? null;
+            // Retrieve the method name from the new $toolSet structure
+            $toolMetadata = $this->toolSet[$function] ?? null;
+            $method = $toolMetadata['method'] ?? null;
 
-            if (empty($method)) {
+            if (empty($method) || ! method_exists($this, $method)) {
                 echo "------------------------ Handler for `$function` is unavailable, finishing --------------------\n\n";
 
                 return false;
             }
 
+            echo "------------------ Calling `$method` ---------------\n";
+
+            // Execute the handler method
             if (! $this->$method(...$args)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /**
+     * Stores the list of enabled tool names or tags.
+     *
+     * @param  array<string>  $tools
+     * @return $this
+     */
+    public function withTools(...$tools): self
+    {
+	if (empty($tools) || !is_array($tools[0]))
+	{
+		$tools = func_get_args ();
+	}
+
+        $this->enabledTools = array_filter($tools);
+
+        return $this;
+    }
+
+    /**
+     * Returns an array of tool descriptions suitable for sending to the LLM.
+     */
+    public function getToolset(): array
+    {
+        if (! empty($this->enabledTools)) {
+            $toolDescriptions = [];
+            $enabledTools = array_flip($this->enabledTools); // For O(1) lookups
+
+            foreach ($this->toolSet as $metadata) {
+                $key = $metadata['key'];
+                $tag = $metadata['tag'];
+
+                // Check if the tool name or the tag is present in the enabled list
+                if (isset($enabledTools[$key]) || isset($enabledTools[$tag])) {
+                    $toolDescriptions[] = $metadata['description'];
+                }
+            }
+
+            return $toolDescriptions;
+        }
+
+        $toolDescriptions = [];
+        foreach ($this->toolSet as $metadata) {
+            // The 'description' key already holds the array structure needed for the LLM.
+            $toolDescriptions[] = $metadata['description'];
+        }
+
+        return $toolDescriptions;
     }
 }

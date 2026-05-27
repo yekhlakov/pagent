@@ -12,7 +12,7 @@ trait Gitlab
                 'type' => 'function',
                 'function' => [
                     'name' => 'gitlab_file',
-                    'description' => 'If you need source code for a php entity (class, attribute, interface, trait), use this function to get it by its fully qualified name.
+                    'description' => 'If you need source code for a php entity (class, attribute, interface, trait) in a Gitlab project, use this function to get it by its fully qualified name.
 The content of the file containing this entity (and associated test, if there\'s one) will be appended to your current context.
 Only entities under the \App namespace will be returned. Always check that className contains namespace.
 ',
@@ -87,7 +87,7 @@ Only entities under the \App namespace will be returned. Always check that class
                 'type' => 'function',
                 'function' => [
                     'name' => 'gitlab_blame',
-                    'description' => 'If you need `git blame` info for a php entity (class, attribute, interface, trait) or part thereof, use this function to get it.
+                    'description' => 'If you need `git blame` info for a php entity (class, attribute, interface, trait) in the Gitlab project, use this function to get it.
 The blame content for the entity will be appended to your current context.
 Only entities under the \App namespace will be analyzed. Always check that className contains namespace.
 ',
@@ -143,7 +143,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
                 'type' => 'function',
                 'function' => [
                     'name' => 'gitlab_ls',
-                    'description' => 'If you need to list of all php entities in a namespace, use this function.
+                    'description' => 'If you need to list of all php entities in a namespace in Gitlab project, use this function.
 The list will be appended to your context.
 Only namespaces under \App will be available.
 ',
