@@ -1,6 +1,7 @@
 .git
 .editorconfig
 config/config.json
+jobs
 output/*
 file-cache.json
 pint.json

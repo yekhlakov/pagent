@@ -26,6 +26,48 @@ class LlmApi
 
     public $usage = [];
 
+	public function getTokens(string $text): array
+	{
+	        $url = $this->baseUrl.'/tokenize';
+
+		$payload = ["content" => $text];
+
+	        $headers = [
+        	    'Authorization: Bearer '.$this->authToken,
+	            'Content-Type: application/json',
+        	];
+
+	        $response = $this->sendCurlRequest($url, $headers, $payload);
+
+        	$data = json_decode($response, true);
+
+	        echo "\n\nLLM RESPONSE: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)."\n\n";
+
+		return $data;
+	}
+	
+
+	public function getEmbeddings(string $text): array
+	{
+	        $url = $this->baseUrl.'/embeddings';
+
+		$payload = ["input" => $text];
+
+	        $headers = [
+        	    'Authorization: Bearer '.$this->authToken,
+	            'Content-Type: application/json',
+        	];
+
+	        $response = $this->sendCurlRequest($url, $headers, $payload);
+
+        	$data = json_decode($response, true);
+
+	        echo "\n\nLLM RESPONSE: ".json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)."\n\n";
+
+		return $data;
+	}
+
+
     /**
      * Отправляет запрос в LLM.
      *

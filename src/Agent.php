@@ -5,12 +5,14 @@ namespace Yekhlakov\PAgent;
 use Yekhlakov\PAgent\Api\GitlabApi;
 use Yekhlakov\PAgent\Api\JiraApi;
 use Yekhlakov\PAgent\Api\LlmApi;
+use Yekhlakov\PAgent\Api\MattermostApi;
 use Yekhlakov\PAgent\Traits\ToolCallRouterTrait;
 use Yekhlakov\PAgent\Traits\Tools\Cache;
 use Yekhlakov\PAgent\Traits\Tools\Filesystem;
 use Yekhlakov\PAgent\Traits\Tools\Finish;
 use Yekhlakov\PAgent\Traits\Tools\Gitlab;
 use Yekhlakov\PAgent\Traits\Tools\Jira;
+use Yekhlakov\PAgent\Traits\Tools\Mattermost;
 
 class Agent
 {
@@ -19,6 +21,7 @@ class Agent
     use Finish;
     use Gitlab;
     use Jira;
+    use Mattermost;
     use ToolCallRouterTrait;
 
     private string $id;
@@ -45,6 +48,8 @@ class Agent
     private LlmApi $llmApi;
 
     private JiraApi $jiraApi;
+
+   	private MattermostApi $mmApi;
 
     public readonly \DateTimeZone $dateTimeZone;
 
@@ -112,6 +117,11 @@ If the information provided to you by the user is insufficient to perform your t
             $this->config['jira']['apiToken'],
             $this->config['jira']['customFieldMap'] ?? []
         );
+
+	$this->mmApi = new MattermostApi(
+            $this->config['mattermost']['apiUrl'],
+            $this->config['mattermost']['apiToken'],
+	);
 
         // 2. Initialize Query Routing
 

@@ -16,10 +16,14 @@
 	}
     },
 
+	"mattermost": {
+		"apiUrl": "https://mattermost-api.local/api/v4",
+		"apiToken": "54321"
+	},
+
     "filesystem": {
 	"root_directory": "c:/work/project1"
     },
-
 
 	"llm": {
 		"local": {
