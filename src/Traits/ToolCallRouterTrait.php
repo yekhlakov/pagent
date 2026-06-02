@@ -127,6 +127,7 @@ trait ToolCallRouterTrait
             echo "\n\n----------------- Here is the result: ----------------------\n";
 
             echo $response['content'] ?? "\n";
+		$this->result = $response['content'] ?? "\n";
 
             return false;
         }

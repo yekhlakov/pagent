@@ -21,7 +21,6 @@ class MattermostApi
     /**
      * Internal helper function derived from CurlTrait to execute HTTP requests.
      * This method handles the cURL setup and execution without explicitly calling curl_close().
-     *
      * @param  string  $endpoint  The specific API endpoint path (e.g., /posts).
      * @param  array  $headers  Custom headers (including Authorization).
      * @param  array|string|null  $payload  The request body data.
@@ -239,6 +238,7 @@ class MattermostApi
      * @param  int|null  $since  Unix timestamp in milliseconds to retrieve posts after.
      * @param  string|null  $before  Post ID to retrieve posts before.
      * @param  string|null  $after  Post ID to retrieve posts after.
+     * @param  bool  $filterPosts  Whether to filter and simplify the post object.
      * @return array ["has_more" => bool, "posts" => An array of filtered post objects keyed by post ID, in reverse chronological order].
      *
      * @throws \Exception On API failure.
@@ -334,6 +334,83 @@ class MattermostApi
 
         // 3. Return the result in reverse order
         return ['has_more' => ! empty($data['order']), 'posts' => array_reverse($orderedPosts)];
+    }
+
+    /**
+     * Retrieves all posts (comments) from a specific thread, ordered chronologically.
+     *
+     * @param  string  $postId  The ID of the root post (the thread initiator).
+     * @param  bool  $filterPosts  Whether to filter and simplify the post object.
+     * @return array An array of filtered post objects, ordered chronologically (oldest first).
+     *
+     * @throws \Exception On API failure or decoding error.
+     */
+    public function getThreadPosts(string $postId, bool $filterPosts = true): array
+    {
+        $headers = [
+            'Authorization: Bearer '.$this->accessToken,
+            'Content-Type: application/json',
+        ];
+
+        // 1. Construct the endpoint
+        $endpoint = "/posts/{$postId}/thread";
+
+        // 2. Execute the GET request
+        $responseBody = $this->sendCurlRequest(
+            $endpoint,
+            $headers,
+            null, // No payload for GET request
+            [],
+            false // Not a POST request
+        );
+
+        // 3. Decode the response
+        $data = json_decode($responseBody, true);
+
+        if (! is_array($data) || ! isset($data['posts']) || ! is_array($data['posts']) || ! isset($data['order']) || ! is_array($data['order'])) {
+            // Return empty array if the response structure is unexpected
+            return [];
+        }
+
+        $posts = $data['posts'];
+        $order = $data['order'];
+        $orderedPosts = [];
+
+
+        // 4. Reorder posts based on the 'order' array and filter fields
+        // Since the API 'order' is already chronological (oldest first), we just iterate and filter.
+        foreach ($order as $postId) {
+            if (empty($posts[$postId])) {
+                continue;
+            }
+
+            $post = $posts[$postId];
+
+            // Apply filtering logic identical to getChannelPosts
+            if (empty($post['root_id']) || ! empty($post['type'])) {
+                // Skip root posts
+                // Skip system posts
+                continue;
+            }
+
+            // 5. Recode/Filter the post object
+            if ($filterPosts) {
+                $filteredPost = [
+		    'post_id' => $postId,
+                    'create_at' => $post['create_at'] ?? null,
+                    'update_at' => $post['update_at'] ?? null,
+                    'user_id' => $post['user_id'] ?? null,
+                    'message' => $post['message'] ?? null,
+                ];
+            } else {
+                $filteredPost = $post;
+            }
+
+            $orderedPosts[$postId] = $filteredPost;
+        }
+
+        // 6. Return the result in chronological order (as provided by the 'order' array)
+        return array_values($orderedPosts);
     }
 
     /**

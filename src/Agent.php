@@ -34,7 +34,7 @@ class Agent
 
     private string $current_context = '';
 
-    private string $result = 'No result';
+    private string $result = '';
 
     public function getResult()
     {

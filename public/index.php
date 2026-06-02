@@ -6,10 +6,21 @@ use Yekhlakov\PAgent\Agent;
 
 $configPath = __DIR__ . '/../config/config.json';
 $jobsDir = __DIR__ . '/../jobs';
-
 if (!is_dir($jobsDir)) {
     mkdir($jobsDir, 0777, true);
 }
+
+// --- Helper function for recursive directory deletion ---
+function deleteDir($dir) {
+    if (!is_dir($dir)) return false;
+    $files = array_diff(scandir($dir), array('.', '..'));
+    foreach ($files as $file) {
+        (is_dir("$dir/$file")) ? deleteDir("$dir/$file") : unlink("$dir/$file");
+    }
+    return rmdir($dir);
+}
+// --------------------------------------------------------
+
 
 // 1. Load Config
 if (!file_exists($configPath)) {
@@ -17,55 +28,73 @@ if (!file_exists($configPath)) {
 }
 $config = json_decode(file_get_contents($configPath), true);
 
-// 2. Handle Job Creation
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_job') {
-    $title = $_POST['title'] ?? 'Untitled Job';
-    $llm = $_POST['llm'] ?? 'local';
-    $prompt = $_POST['prompt'] ?? '';
-    $enabledTools = $_POST['tools'] ?? [];
+// 2. Handle Job Creation and Deletion
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action']) && $_POST['action'] === 'create_job') {
+        $title = $_POST['title'] ?? 'Untitled Job';
+        $llm = $_POST['llm'] ?? 'local';
+        $prompt = $_POST['prompt'] ?? '';
+        $enabledTools = $_POST['tools'] ?? [];
 
-    // Create job directory
-    $timezone = $config['agent']['timezone'] ?? 'UTC';
-    $dateStr = (new DateTime('now', new DateTimeZone($timezone)))->format('Y-m-d_H-i-s.u');
-    $jobDirName = $dateStr;
-    $jobDirPath = $jobsDir . '/' . $jobDirName;
-    
-    if (!mkdir($jobDirPath, 0777, true)) {
-        die("Failed to create job directory: $jobDirPath");
+        // Create job directory
+        $timezone = $config['agent']['timezone'] ?? 'UTC';
+        $dateStr = (new DateTime('now', new DateTimeZone($timezone)))->format('Y-m-d_H-i-s.u');
+        $jobDirName = $dateStr;
+        $jobDirPath = $jobsDir . '/' . $jobDirName;
+        
+        if (!mkdir($jobDirPath, 0777, true)) {
+            die("Failed to create job directory: $jobDirPath");
+        }
+
+        // Create files (Requirement 3: Add is_running)
+        $jobJson = [
+            'title' => $title,
+            'llm' => $llm,
+            'prompt' => $prompt,
+            'enabled_tools' => $enabledTools,
+            'created_at' => $dateStr,
+            'is_running' => true // Set to true on creation
+        ];
+        file_put_contents($jobDirPath . '/job.json', json_encode($jobJson, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        file_put_contents($jobDirPath . '/job.log', "");
+        file_put_contents($jobDirPath . '/filecache.json', "{}");
+        
+        // Start worker process
+        $workerPath = __DIR__ . '/../worker.php';
+        $cmd = sprintf('php %s %s', escapeshellarg($workerPath), escapeshellarg($jobDirPath));
+        
+        $descriptorspec = [
+           0 => ["pipe", "r"], // stdin
+           1 => ["file", $jobDirPath . '/job.log', "a"], // stdout
+           2 => ["file", $jobDirPath . '/job.log', "a"]  // stderr
+        ];
+        
+        $process = proc_open($cmd, $descriptorspec, $pipes);
+        if (is_resource($process)) {
+            fclose($pipes[0]);
+            // On Windows, to truly detach, one might use 'start /B' in the command.
+            // But we follow the instruction to use proc_open.
+        }
+
+        // Redirect to the new job
+        header("Location: index.php?job=" . urlencode($jobDirName));
+        exit;
+    } elseif (isset($_POST['action']) && $_POST['action'] === 'delete_job') {
+        $jobDirName = $_POST['job_dir'] ?? null;
+        if ($jobDirName) {
+            $jobDirPath = $jobsDir . '/' . $jobDirName;
+            
+            // Perform deletion (Requirement 2)
+            if (deleteDir($jobDirPath)) {
+                // Successfully deleted, redirect to unselect job
+                header("Location: index.php");
+                exit;
+            } else {
+                // Handle deletion failure (optional: show an error message)
+                echo "Error deleting job: $jobDirName";
+            }
+        }
     }
-
-    // Create files
-    $jobJson = [
-        'title' => $title,
-        'llm' => $llm,
-        'prompt' => $prompt,
-        'enabled_tools' => $enabledTools,
-        'created_at' => $dateStr
-    ];
-    file_put_contents($jobDirPath . '/job.json', json_encode($jobJson, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-    file_put_contents($jobDirPath . '/job.log', "");
-    file_put_contents($jobDirPath . '/filecache.json', "{}");
-
-    // Start worker process
-    $workerPath = __DIR__ . '/../worker.php';
-    $cmd = sprintf('php %s %s', escapeshellarg($workerPath), escapeshellarg($jobDirPath));
-    
-    $descriptorspec = [
-       0 => ["pipe", "r"], // stdin
-       1 => ["file", $jobDirPath . '/job.log', "a"], // stdout
-       2 => ["file", $jobDirPath . '/job.log', "a"]  // stderr
-    ];
-    
-    $process = proc_open($cmd, $descriptorspec, $pipes);
-    if (is_resource($process)) {
-        fclose($pipes[0]);
-        // On Windows, to truly detach, one might use 'start /B' in the command.
-        // But we follow the instruction to use proc_open.
-    }
-
-    // Redirect to the new job
-    header("Location: index.php?job=" . urlencode($jobDirName));
-    exit;
 }
 
 // 3. Get Jobs List
@@ -87,13 +116,23 @@ usort($jobList, function($a, $b) {
     return strcmp($b['created_at'], $a['created_at']);
 });
 
-// 4. Get Selected Job
+// 4. Get Selected Job and Metadata
 $selectedJob = $_GET['job'] ?? null;
 $jobLogContent = "";
+$isJobRunning = false; // Default to false
 if ($selectedJob) {
-    $logPath = $jobsDir . '/' . $selectedJob . '/job.log';
+    $jobPath = $jobsDir . '/' . $selectedJob;
+    $jobJsonPath = $jobPath . '/job.json';
+    $logPath = $jobPath . '/job.log';
+    
     if (file_exists($logPath)) {
         $jobLogContent = file_get_contents($logPath);
+    }
+
+    if (file_exists($jobJsonPath)) {
+        $jobData = json_decode(file_get_contents($jobJsonPath), true);
+        // Requirement 4: Check is_running status
+        $isJobRunning = $jobData['is_running'] ?? false; 
     }
 }
 
@@ -138,20 +177,26 @@ ob_end_clean(); // Discard buffered output
         .tag-title { font-weight: bold; color: #333; }
         .tool-item { margin-left: 20px; font-weight: normal; font-size: 0.9em; }
         pre { background: #222; color: #eee; padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; margin-right: 10px; }
         button:hover { background: #0056b3; }
+        .delete-button { background: red !important; }
     </style>
-    <?php if ($selectedJob): ?>
+    <?php if ($selectedJob && $isJobRunning): ?>
     <script>
+        // Requirement 4: Refresh only if is_running is true
         setTimeout(function() {
             location.reload();
         }, 5000);
     </script>
     <?php endif; ?>
 </head>
-<body >
+<body>
     <div class="left-column">
-        <h3>Jobs</h3>
+        <h3 style="display: flex; justify-content: space-between; align-items: center;">
+            Jobs
+            <!-- Requirement 1: New job button -->
+            <button onclick="location.href='?job='">New job</button>
+        </h3>
         <?php foreach ($jobList as $job): ?>
             <div class="job-item <?php echo ($selectedJob === $job['dir']) ? 'selected' : ''; ?>" 
                  onclick="location.href='?job=<?php echo urlencode($job['dir']); ?>'">
@@ -214,8 +259,16 @@ ob_end_clean(); // Discard buffered output
             </form>
         <?php else: ?>
             <h2>Job Log: <?php echo htmlspecialchars($selectedJob); ?></h2>
+            
+            <!-- Requirement 2: Delete Job Button -->
+            <form method="POST" style="margin-bottom: 15px;">
+                <input type="hidden" name="action" value="delete_job">
+                <input type="hidden" name="job_dir" value="<?php echo htmlspecialchars($selectedJob); ?>">
+                <button type="submit" class="delete-button">Delete job</button>
+            </form>
+            
             <pre><?php echo htmlspecialchars($jobLogContent); ?></pre>
         <?php endif; ?>
-    </div >
-</body >
+    </div>
+</body>
 </html>

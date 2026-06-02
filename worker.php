@@ -48,3 +48,12 @@ $agent->handle($prompt);
 
 // Store file cache
 $agent->storeFileCache($jobDir . '/filecache.json');
+
+// Update job.json to set is_running to false
+$jobJsonPath = $jobDir . '/job.json';
+$jobData = json_decode(file_get_contents($jobJsonPath), true);
+if ($jobData) {
+    $jobData['is_running'] = false;
+    $jobData['result'] = $agent->getResult();
+    file_put_contents($jobJsonPath, json_encode($jobData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+}
