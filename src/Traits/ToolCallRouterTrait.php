@@ -151,6 +151,9 @@ trait ToolCallRouterTrait
 
             echo "------------------ Calling `$method` ---------------\n";
 
+
+	    $this->current_context .= "** You have issued a tool call $function with args {" . $this->compactJson($args) . "}**\n";
+
             // Execute the handler method
             if (! $this->$method(...$args)) {
                 return false;

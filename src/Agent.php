@@ -158,16 +158,15 @@ If the information provided to you by the user is insufficient to perform your t
         return $copy;
     }
 
-    public function compactJson($jsonString)
+    public function compactJson($unpacked): string
     {
-        $unpacked = json_decode($jsonString, true);
         foreach ($unpacked as $k => $v) {
-            if (is_string($v) && strlen($v) > 30) {
+            if (\is_string($v) && \strlen($v) > 30) {
                 $v = '(The content was truncated)';
             }
         }
 
-        return json_encode($unpacked);
+        return json_encode($unpacked, JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -219,15 +218,6 @@ If the information provided to you by the user is insufficient to perform your t
             $reasoning = $result['choices'][0]['message']['reasoning_content'] ?? '';
             if (! empty($reasoning)) {
                 $this->current_context .= '**You reasoned**: '.$reasoning."\n";
-            }
-
-            $tool_calls = $result['choices'][0]['message']['tool_calls'] ?? [];
-            if (! empty($tool_calls)) {
-                $this->current_context .= "**You called tools**:\n";
-                foreach ($tool_calls as $call) {
-                    $this->current_context .= '- function `'.$call['function']['name'].'` with arguments `'.$this->compactJson($call['function']['arguments'])."\n";
-                }
-                $this->current_context .= "\n";
             }
 
             // 3. Process the response

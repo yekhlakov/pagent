@@ -257,7 +257,7 @@ trait Filesystem
             ],
         ],
     ])]
-    public function executeFpatch(string $fileName, int $startLine = 1, ?int $endLine = null, string $content = ''): bool
+    public function executeFpatch(string $fileName, int $startLine = 1, ?int $endLine = null, string $content = '', bool $finish = false): bool
     {
         $absolutePath = $this->getAbsoluteFilePath($fileName);
 

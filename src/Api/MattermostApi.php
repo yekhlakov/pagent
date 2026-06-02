@@ -319,6 +319,7 @@ class MattermostApi
             // 2. Recode/Filter the post object
             if ($filterPosts) {
                 $filteredPost = [
+		    'post_id' => $postId,
                     'create_at' => $post['create_at'] ?? null,
                     'update_at' => $post['update_at'] ?? null,
                     'user_id' => $post['user_id'] ?? null,
