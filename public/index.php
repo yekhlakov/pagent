@@ -121,8 +121,9 @@ usort($jobList, function($a, $b) {
 // 4. Get Selected Job and Metadata
 $selectedJob = $_GET['job'] ?? null;
 $jobLogContent = "";
-$jobResultContent = null; // New variable to hold the result
-$isJobRunning = false; // Default to false
+$jobResultContent = null; 
+$isJobRunning = false; 
+$jobPromptContent = ''; // New variable for prompt
 if ($selectedJob) {
     $jobPath = $jobsDir . '/' . $selectedJob;
     $jobJsonPath = $jobPath . '/job.json';
@@ -137,7 +138,8 @@ if ($selectedJob) {
         // Requirement 4: Check is_running status
         $isJobRunning = $jobData['is_running'] ?? false; 
         
-        // Requirement 1: Check for result
+        // Requirement 1: Get prompt and result
+        $jobPromptContent = $jobData['prompt'] ?? '';
         $result = $jobData['result'] ?? null;
         if (!empty($result)) {
             $jobResultContent = $result; // Store the Markdown string
@@ -193,6 +195,36 @@ ob_end_clean(); // Discard buffered output
         .delete-button { background: red !important; }
         .result-display { margin-top: 20px; padding: 15px; border: 1px solid #007bff; background-color: #e6f0ff; border-radius: 5px; }
         .result-display h3 { margin-top: 0; }
+        
+        /* Collapsible Styles */
+        .collapsible-container {
+            cursor: pointer;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f0f0f0;
+            transition: max-height 0.3s ease-in-out; /* Smooth height transition */
+            overflow: hidden;
+            /* Initial state: collapsed */
+            max-height: 0; 
+        }
+        .collapsible-container.expanded {
+            /* Set a large enough value to allow full expansion */
+            max-height: 1000px; 
+        }
+        .collapsible-content {
+            padding: 0; /* Padding handled by the container */
+        }
+        
+        /* Prompt specific styling for truncation */
+        .prompt-text {
+            display: block;
+            /* This ensures the prompt text itself is visible and truncated */
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
     <?php if ($selectedJob && $isJobRunning): ?>
     <script>
@@ -280,6 +312,22 @@ ob_end_clean(); // Discard buffered output
                 <button type="submit" class="delete-button">Delete job</button>
             </form>
 
+            <?php if ($jobPromptContent): ?>
+                <!-- Requirement 1: Display Prompt above Result -->
+                <div class="result-display" style="background-color: #fff3e6; border-color: #ff9800;">
+                    <h3>📝 Job Prompt</h3>
+                    <!-- Collapsible container for prompt -->
+                    <div class="collapsible-container" id="prompt" onclick="togglePrompt()">
+                        <!-- The prompt content itself, styled to truncate -->
+                        <div class="collapsible-content">
+                            <span class="prompt-text" id="promptDisplay">
+                                <?php echo htmlspecialchars($jobPromptContent); ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <?php if ($jobResultContent): ?>
                 <!-- Display Result (Requirement 1 & 2) -->
                 <div class="result-display">
@@ -293,13 +341,50 @@ ob_end_clean(); // Discard buffered output
                         <!-- Content will be injected here by JavaScript -->
                     </div>
                 </div>
-		<script>document.getElementById('output').innerHTML=marked.parse(document.getElementById('markdownSource').textContent)</script>
+                <script>document.getElementById('output').innerHTML=marked.parse(document.getElementById('markdownSource').textContent)</script>
             <?php endif; ?>
 
-            <!-- Display Log -->
-            <h3>Job Log</h3>
-            <pre><?php echo htmlspecialchars($jobLogContent); ?></pre>
+            <!-- Display Log (Requirement 2: Collapsible for finished jobs) -->
+            <h3 style="margin-top: 20px;">Job Log</h3>
+            <?php if (!$isJobRunning): ?>
+                <!-- Collapsible container for finished job log -->
+                <div class="collapsible-container" id="log" onclick="toggleLog()">
+                    <div class="collapsible-content">
+                        <pre><?php echo htmlspecialchars($jobLogContent); ?></pre>
+                    </div>
+                </div>
+            <?php else: ?>
+                <!-- Log displayed directly if running -->
+                <pre><?php echo htmlspecialchars($jobLogContent); ?></pre>
+            <?php endif; ?>
+
         <?php endif; ?>
     </div>
-</body>
-</html>
+</body >
+</html >
+
+<script>
+    // Function to toggle the prompt display (Requirement 3)
+    function togglePrompt() {
+        const container = document.querySelector('.collapsible-container#prompt');
+        const span = container.querySelector('.prompt-text');
+        
+        // Toggle the expanded class to trigger CSS transition
+        container.classList.toggle('expanded');
+        
+        // Since we are only using max-height on the container, we must ensure the content is visible when expanded.
+        // We simply rely on the CSS max-height: 1000px to expand the container and show the content.
+    }
+
+    // Function to toggle the job log display (Requirement 3)
+    function toggleLog() {
+        const container = document.querySelector('.collapsible-container#log');
+        const content = container.querySelector('.collapsible-content');
+
+        // Toggle the expanded class
+        container.classList.toggle('expanded');
+        
+        // Note: Because the <pre> content inside is the element that needs to expand, 
+        // setting max-height on the parent container is the correct way to achieve the effect.
+    }
+</script>
