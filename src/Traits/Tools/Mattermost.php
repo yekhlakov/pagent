@@ -12,9 +12,9 @@ trait Mattermost
     /**
      * Posts content to a specified Mattermost channel.
      *
-     * @param string $channelId The ID of the channel where the message should be posted.
-     * @param string $content The text content of the message.
-     * @param bool $finish If true, the function returns false (signaling completion/stop).
+     * @param  string  $channelId  The ID of the channel where the message should be posted.
+     * @param  string  $content  The text content of the message.
+     * @param  bool  $finish  If true, the function returns false (signaling completion/stop).
      * @return bool|string Returns false if $finish is true, otherwise returns the API response body.
      *
      * @throws \Exception If the API call fails.
@@ -39,23 +39,65 @@ trait Mattermost
     {
         try {
             $this->mmApi->postToMattermost($channelId, $content);
-	    $this->current_context .= "--- The post was successfully posted to Mattermost channel $channelId ---\n";
+            $this->current_context .= "--- The post was successfully posted to Mattermost channel `$channelId` ---\n";
 
-            return !$finish;
+            return ! $finish;
 
         } catch (\Exception $e) {
             // Re-throw or handle the API exception
             throw $e;
-	}
+        }
+    }
+
+    /**
+     * Posts a reply (comment) to a specific existing post within a Mattermost channel.
+     *
+     * @param  string  $channelId  The ID of the channel where the post resides.
+     * @param  string  $postId  The ID of the post that is being replied to.
+     * @param  string  $content  The content of the reply message.
+     * @param  bool  $finish  If true, the function returns false (signaling completion/stop).
+     * @return bool|string Returns false if $finish is true, otherwise returns the API response body.
+     *
+     * @throws \Exception If the API call fails.
+     */
+    #[LlmTool([
+        'type' => 'function',
+        'function' => [
+            'description' => 'Posts a reply (comment) to an existing post within a Mattermost channel thread.',
+            'name' => 'mm_reply',
+            'parameters' => [
+                'type' => 'object',
+                'properties' => [
+                    'channelId' => ['type' => 'string', 'description' => 'The ID of the channel where the post resides.'],
+                    'postId' => ['type' => 'string', 'description' => 'The ID of the original post to which the reply is directed.'],
+                    'content' => ['type' => 'string', 'description' => 'The content of the reply message.'],
+                    'finish' => ['type' => 'boolean', 'description' => 'If set to true, the agent should stop after posting the reply.'],
+                ],
+                'required' => ['channelId', 'postId', 'content'],
+            ],
+        ],
+    ])]
+    public function mm_reply(string $channelId, string $postId, string $content, bool $finish = false)
+    {
+        try {
+            $this->mmApi->postReply($channelId, $postId, $content);
+            $this->current_context .= "--- The reply was successfully posted to Mattermost post `$postId` in channel `$channelId` ---\n";
+
+            return ! $finish;
+
+        } catch (\Exception $e) {
+            // Re-throw or handle the API exception
+            throw $e;
+        }
     }
 
     /**
      * Extracts a range of posts from a specified Mattermost channel.
      *
-     * @param string $channelId The ID of the target Mattermost channel.
-     * @param int $page The page number to retrieve (default 0).
-     * @param int $perPage The number of posts per page to retrieve (default 100).
-     * @param bool $finish If true, the function returns false (signaling completion/stop).
+     * @param  string  $channelId  The ID of the target Mattermost channel.
+     * @param  int  $page  The page number to retrieve (default 0).
+     * @param  int  $perPage  The number of posts per page to retrieve (default 100).
+     * @param  bool  $finish  If true, the function returns false (signaling completion/stop).
      * @return bool|string Returns false if $finish is true, otherwise returns null.
      *
      * @throws \Exception If the API call fails.
@@ -104,9 +146,9 @@ trait Mattermost
     /**
      * Retrieves all chronological posts (comments) from a specific thread.
      *
-     * @param string $postId The ID of the root post (the thread initiator).
-     * @param bool $filterPosts Whether to filter and simplify the post object.
-     * @param bool $finish If true, the function returns false (signaling completion/stop).
+     * @param  string  $postId  The ID of the root post (the thread initiator).
+     * @param  bool  $filterPosts  Whether to filter and simplify the post object.
+     * @param  bool  $finish  If true, the function returns false (signaling completion/stop).
      * @return bool|string Returns false if $finish is true, otherwise returns null.
      *
      * @throws \Exception If the API call fails.
@@ -140,9 +182,6 @@ trait Mattermost
                 "Posts in Mattermost Thread {$postId} (Chronological Order)"
             );
 
-		echo $output;
-
-
             // 3. Add to context
             $this->current_context .= $output;
 
@@ -157,10 +196,10 @@ trait Mattermost
     /**
      * Helper method to format an array of posts into a readable string output block.
      *
-     * @param array $posts The array of post objects.
-     * @param string $identifier The ID of the channel or thread.
-     * @param bool $hasMore Whether there are more results (relevant for channels).
-     * @param string $title The title of the output block.
+     * @param  array  $posts  The array of post objects.
+     * @param  string  $identifier  The ID of the channel or thread.
+     * @param  bool  $hasMore  Whether there are more results (relevant for channels).
+     * @param  string  $title  The title of the output block.
      * @return string The formatted string block.
      */
     private function formatPostsOutput(array $posts, string $identifier, bool $hasMore, string $title): string
@@ -188,6 +227,7 @@ create_at: {$post['create_at']}
                 $output .= "=== There are no more posts in {$identifier} ===\n";
             }
         }
+
         return $output;
     }
 }

@@ -13,10 +13,12 @@ if (!is_dir($jobsDir)) {
 // --- Helper function for recursive directory deletion ---
 function deleteDir($dir) {
     if (!is_dir($dir)) return false;
+    // Fix typo: scandir
     $files = array_diff(scandir($dir), array('.', '..'));
     foreach ($files as $file) {
         (is_dir("$dir/$file")) ? deleteDir("$dir/$file") : unlink("$dir/$file");
     }
+    // Fix typo: rmdir
     return rmdir($dir);
 }
 // --------------------------------------------------------
@@ -119,6 +121,7 @@ usort($jobList, function($a, $b) {
 // 4. Get Selected Job and Metadata
 $selectedJob = $_GET['job'] ?? null;
 $jobLogContent = "";
+$jobResultContent = null; // New variable to hold the result
 $isJobRunning = false; // Default to false
 if ($selectedJob) {
     $jobPath = $jobsDir . '/' . $selectedJob;
@@ -133,6 +136,12 @@ if ($selectedJob) {
         $jobData = json_decode(file_get_contents($jobJsonPath), true);
         // Requirement 4: Check is_running status
         $isJobRunning = $jobData['is_running'] ?? false; 
+        
+        // Requirement 1: Check for result
+        $result = $jobData['result'] ?? null;
+        if (!empty($result)) {
+            $jobResultContent = $result; // Store the Markdown string
+        }
     }
 }
 
@@ -161,6 +170,8 @@ ob_end_clean(); // Discard buffered output
 <head>
     <meta charset="UTF-8">
     <title>Agent Web Interface</title>
+    <!-- Include the marked library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
     <style>
         body { font-family: sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
         .left-column { width: 300px; border-right: 1px solid #ccc; overflow-y: auto; padding: 10px; background: #f9f9f9; }
@@ -180,6 +191,8 @@ ob_end_clean(); // Discard buffered output
         button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; margin-right: 10px; }
         button:hover { background: #0056b3; }
         .delete-button { background: red !important; }
+        .result-display { margin-top: 20px; padding: 15px; border: 1px solid #007bff; background-color: #e6f0ff; border-radius: 5px; }
+        .result-display h3 { margin-top: 0; }
     </style>
     <?php if ($selectedJob && $isJobRunning): ?>
     <script>
@@ -266,7 +279,25 @@ ob_end_clean(); // Discard buffered output
                 <input type="hidden" name="job_dir" value="<?php echo htmlspecialchars($selectedJob); ?>">
                 <button type="submit" class="delete-button">Delete job</button>
             </form>
-            
+
+            <?php if ($jobResultContent): ?>
+                <!-- Display Result (Requirement 1 & 2) -->
+                <div class="result-display">
+                    <h3>✅ Job Result</h3>
+                    <!-- Markdown source container -->
+                    <div id="markdownSource" style="display: none;">
+                        <?php echo htmlspecialchars($jobResultContent); ?>
+                    </div>
+                    <!-- HTML output container -->
+                    <div id="output">
+                        <!-- Content will be injected here by JavaScript -->
+                    </div>
+                </div>
+		<script>document.getElementById('output').innerHTML=marked.parse(document.getElementById('markdownSource').textContent)</script>
+            <?php endif; ?>
+
+            <!-- Display Log -->
+            <h3>Job Log</h3>
             <pre><?php echo htmlspecialchars($jobLogContent); ?></pre>
         <?php endif; ?>
     </div>

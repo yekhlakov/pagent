@@ -127,7 +127,7 @@ trait ToolCallRouterTrait
             echo "\n\n----------------- Here is the result: ----------------------\n";
 
             echo $response['content'] ?? "\n";
-		$this->result = $response['content'] ?? "\n";
+            $this->result = $response['content'] ?? "\n";
 
             return false;
         }
@@ -152,8 +152,7 @@ trait ToolCallRouterTrait
 
             echo "------------------ Calling `$method` ---------------\n";
 
-
-	    $this->current_context .= "** You have issued a tool call $function with args {" . $this->compactJson($args) . "}**\n";
+            $this->current_context .= "** You have issued a tool call $function with args {".$this->compactJson($args)."}**\n";
 
             // Execute the handler method
             if (! $this->$method(...$args)) {
@@ -172,10 +171,9 @@ trait ToolCallRouterTrait
      */
     public function withTools(...$tools): self
     {
-	if (empty($tools) || !is_array($tools[0]))
-	{
-		$tools = func_get_args ();
-	}
+        if (empty($tools) || ! is_array($tools[0])) {
+            $tools = func_get_args();
+        }
 
         $this->enabledTools = array_filter($tools);
 

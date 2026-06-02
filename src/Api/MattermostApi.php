@@ -21,6 +21,7 @@ class MattermostApi
     /**
      * Internal helper function derived from CurlTrait to execute HTTP requests.
      * This method handles the cURL setup and execution without explicitly calling curl_close().
+     *
      * @param  string  $endpoint  The specific API endpoint path (e.g., /posts).
      * @param  array  $headers  Custom headers (including Authorization).
      * @param  array|string|null  $payload  The request body data.
@@ -82,12 +83,48 @@ class MattermostApi
      *
      * @throws \Exception On API failure.
      */
-    public function postToMattermost(string $channelId, string $message): string
+    public function postPost(string $channelId, string $message): string
     {
         // 1. Construct the JSON payload
         $payload = [
             'channel_id' => $channelId,
             'message' => $message,
+        ];
+
+        // 2. Define headers
+        $headers = [
+            'Authorization: Bearer '.$this->accessToken,
+            'Content-Type: application/json',
+        ];
+
+        // 3. Execute the request
+        // Endpoint: /posts
+        return $this->sendCurlRequest(
+            '/posts',
+            $headers,
+            $payload,
+            [],
+            true // isPost = true
+        );
+    }
+
+    /**
+     * Sends a reply (comment) to a specific post within a channel.
+     *
+     * @param  string  $channelId  The ID of the channel where the post resides.
+     * @param  string  $postId  The ID of the post being replied to (the root_id).
+     * @param  string  $content  The content of the reply message.
+     * @return string The raw response body from the server.
+     *
+     * @throws \Exception On API failure.
+     */
+    public function postReply(string $channelId, string $postId, string $content): string
+    {
+        // 1. Construct the JSON payload
+        $payload = [
+            'channel_id' => $channelId,
+            'message' => $content,
+            'root_id' => $postId,
         ];
 
         // 2. Define headers
@@ -167,7 +204,6 @@ class MattermostApi
                     [],
                     false
                 );
-
                 $memberships = json_decode($response, true);
 
                 if (is_array($memberships)) {
@@ -213,7 +249,6 @@ class MattermostApi
             'Authorization: Bearer '.$this->accessToken,
             'Content-Type: application/json',
         ];
-
         // 3. Execute the request
         // Endpoint: /teams/{$teamId}/posts/search
         $endpoint = "/teams/{$teamId}/posts/search";
@@ -256,7 +291,6 @@ class MattermostApi
             'Authorization: Bearer '.$this->accessToken,
             'Content-Type: application/json',
         ];
-
         // Build the endpoint and query parameters
         $endpoint = "/channels/{$channelId}/posts";
         $queryParams = [];
@@ -319,7 +353,7 @@ class MattermostApi
             // 2. Recode/Filter the post object
             if ($filterPosts) {
                 $filteredPost = [
-		    'post_id' => $postId,
+                    'post_id' => $postId,
                     'create_at' => $post['create_at'] ?? null,
                     'update_at' => $post['update_at'] ?? null,
                     'user_id' => $post['user_id'] ?? null,
@@ -376,7 +410,6 @@ class MattermostApi
         $order = $data['order'];
         $orderedPosts = [];
 
-
         // 4. Reorder posts based on the 'order' array and filter fields
         // Since the API 'order' is already chronological (oldest first), we just iterate and filter.
         foreach ($order as $postId) {
@@ -396,7 +429,7 @@ class MattermostApi
             // 5. Recode/Filter the post object
             if ($filterPosts) {
                 $filteredPost = [
-		    'post_id' => $postId,
+                    'post_id' => $postId,
                     'create_at' => $post['create_at'] ?? null,
                     'update_at' => $post['update_at'] ?? null,
                     'user_id' => $post['user_id'] ?? null,
@@ -443,7 +476,6 @@ class MattermostApi
 
         // 4. Decode and return
         $postInfo = json_decode($responseBody, true);
-
         if (! is_array($postInfo)) {
             throw new \Exception("Failed to decode post information for ID {$postId}.");
         }
@@ -476,7 +508,6 @@ class MattermostApi
             [],
             true // isPost = true
         );
-
         // 3. Decode and return
         $userList = json_decode($responseBody, true);
 

@@ -156,7 +156,7 @@ trait Filesystem
     ])]
     public function executeFread(array $fileNames): bool
     {
-	echo "FREAD called with " . json_encode($fileNames) . "\n";
+        echo 'FREAD called with '.json_encode($fileNames)."\n";
 
         foreach ($fileNames as $fileName) {
             $absolutePath = $this->getAbsoluteFilePath($fileName);
@@ -226,7 +226,7 @@ trait Filesystem
         } catch (\Exception $e) {
             $this->current_context .= "!!! Exception occurred while writing to '$fileName': ".$e->getMessage()." !!!\n";
 
-                return false; // Fatal error, cannot proceed
+            return false; // Fatal error, cannot proceed
         }
     }
 
@@ -264,7 +264,7 @@ trait Filesystem
         if (! file_exists($absolutePath)) {
             $this->current_context .= "!!! Error: File '$fileName' does not exist. Cannot patch. !!!\n";
 
-                return false; // Fatal error, cannot proceed
+            return false; // Fatal error, cannot proceed
         }
 
         try {
@@ -315,7 +315,7 @@ trait Filesystem
         } catch (\Exception $e) {
             $this->current_context .= "!!! Exception occurred while patching '$fileName': ".$e->getMessage()." !!!\n";
 
-                return false; // Fatal error, cannot proceed
+            return false; // Fatal error, cannot proceed
         }
     }
 }

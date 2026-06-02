@@ -25,7 +25,7 @@ The task text (along with several additional fields and comments) will be added 
     {
         $this->current_context .= $this->getFormattedJiraTaskText($taskKey)."\n";
 
-	return true;
+        return true;
     }
 
     public function getFormattedJiraTaskText(string $taskKey): string

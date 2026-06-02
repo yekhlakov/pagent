@@ -49,7 +49,7 @@ class Agent
 
     private JiraApi $jiraApi;
 
-   	private MattermostApi $mmApi;
+    private MattermostApi $mmApi;
 
     public readonly \DateTimeZone $dateTimeZone;
 
@@ -118,10 +118,10 @@ If the information provided to you by the user is insufficient to perform your t
             $this->config['jira']['customFieldMap'] ?? []
         );
 
-	$this->mmApi = new MattermostApi(
+        $this->mmApi = new MattermostApi(
             $this->config['mattermost']['apiUrl'],
             $this->config['mattermost']['apiToken'],
-	);
+        );
 
         // 2. Initialize Query Routing
 
@@ -186,9 +186,9 @@ If the information provided to you by the user is insufficient to perform your t
 
         echo "--------------- Agent {$this->id} Started ---------------\n";
 
-	$localToolSet = $this->getToolSet();
+        $localToolSet = $this->getToolSet();
 
-	$localTools = array_map(fn($x) => $x['function']['name'], $localToolSet);
+        $localTools = array_map(fn ($x) => $x['function']['name'], $localToolSet);
 
         echo '--------------- '.count($localTools)." tools are enabled for session ---------------\n";
         echo '['.implode(', ', $localTools)."]\n\n";
