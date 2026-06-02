@@ -23,9 +23,12 @@ if (!$jobData) {
     exit(1);
 }
 
+// Set the current working directory to the script's directory to ensure relative paths like config/config.json resolve correctly.
+chdir(__DIR__);
 $llm = $jobData['llm'] ?? 'local';
 $tools = $jobData['tools'] ?? [];
 $prompt = $jobData['prompt'] ?? '';
+
 
 // Use the timezone from config if possible, but Agent handles it.
 // We just need to pass the llm and tools.
