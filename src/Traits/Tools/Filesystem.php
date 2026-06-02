@@ -242,14 +242,14 @@ trait Filesystem
     #[LlmTool([
         'type' => 'function',
         'function' => [
-            'description' => 'Modifies a segment of an existing file in the local file system. The replacement starts at startLine and ends at endLine. If content is empty, the segment is deleted.',
+            'description' => 'Modifies a range of lines of an existing file in the local file system. The replacement starts after the `startLine` and ends just before `endLine`. If `content` is empty, the segment is deleted. Lines are numbered starting from 1.',
             'name' => 'fpatch',
             'parameters' => [
                 'type' => 'object',
                 'properties' => [
                     'fileName' => ['type' => 'string', 'description' => 'The relative path to the file.'],
-                    'startLine' => ['type' => 'integer', 'description' => 'The first line number to replace (default is 1).'],
-                    'endLine' => ['type' => 'integer', 'description' => 'The last line number to replace (default is the last line).'],
+                    'prevLine' => ['type' => 'integer', 'description' => 'The line number immediately BEFORE the part to replace (default is 0 which is before the first line). The file from the beginning to this line will not be affected by patch.'],
+                    'nextLine' => ['type' => 'integer', 'description' => 'The line number immediately AFTER the part to replace (default is the last line + 1). The file from this line to the end will not be affected by patch.'],
                     'content' => ['type' => 'string', 'description' => 'The new content to write over the replaced fragment. Use an empty string ("") to delete the fragment.'],
                     'finish' => ['type' => 'boolean', 'description' => 'If you have nothing to do after the write, set this task to finish your work'],
                 ],
@@ -257,7 +257,7 @@ trait Filesystem
             ],
         ],
     ])]
-    public function executeFpatch(string $fileName, int $startLine = 1, ?int $endLine = null, string $content = '', bool $finish = false): bool
+    public function executeFpatch(string $fileName, int $prevLine = 0, ?int $nextLine = null, string $content = '', bool $finish = false): bool
     {
         $absolutePath = $this->getAbsoluteFilePath($fileName);
 
@@ -280,31 +280,21 @@ trait Filesystem
             $totalLines = count($lines);
 
             // Handle default endLine
-            if ($endLine === null) {
-                $endLine = $totalLines;
+            if ($nextLine === null) {
+                $nextLine = $totalLines + 1;
             }
 
             // Ensure line numbers are within bounds and positive
-            $startLine = max(1, min($startLine, $totalLines));
-            $endLine = max(1, min($endLine, $totalLines));
-
-            if ($startLine > $endLine) {
-                $this->current_context .= "!!! Error: Invalid line range specified for patching (startLine > endLine). !!!\n";
-
-                return false; // Fatal error, cannot proceed
-            }
-
-            // The lines array is 0-indexed, so we adjust indices.
-            $startIndex = $startLine - 1;
-            $endIndex = $endLine; // PHP slice is exclusive of the end index
+            $startLine = max(0, min($prevLine, $totalLines));
+            $endLine = max($startLine + 1, min($nextLine, $totalLines + 1)) - 1;
 
             // Get the new lines
             $newLines = explode("\n", $content);
 
             // Perform the patch
-            $newLinesArray = array_slice($lines, 0, $startIndex); // Lines before patch
+            $newLinesArray = array_slice($lines, 0, $startLine); // Lines before patch
             $newLinesArray = array_merge($newLinesArray, $newLines); // Insert new content
-            $newLinesArray = array_merge($newLinesArray, array_slice($lines, $endIndex)); // Lines after patch
+            $newLinesArray = array_merge($newLinesArray, array_slice($lines, $endLine)); // Lines after patch
 
             // Rejoin the content
             $newContent = implode("\n", $newLinesArray);
