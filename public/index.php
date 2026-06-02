@@ -99,6 +99,7 @@ if ($selectedJob) {
 
 // 5. Get Tools and Tags for the form
 $toolsInfo = ['tools' => [], 'tags' => []];
+ob_start(); // Start output buffering
 try {
     $agent = new Agent($configPath, 'local');
     foreach ($agent->toolSet as $key => $metadata) {
@@ -113,6 +114,7 @@ try {
 } catch (\Exception $e) {
     // If Agent fails to initialize (e.g. due to missing config or other), we just have empty tools.
 }
+ob_end_clean(); // Discard buffered output
 
 ?>
 <!DOCTYPE html>
@@ -147,7 +149,7 @@ try {
     </script>
     <?php endif; ?>
 </head>
-<body>
+<body >
     <div class="left-column">
         <h3>Jobs</h3>
         <?php foreach ($jobList as $job): ?>
@@ -214,6 +216,6 @@ try {
             <h2>Job Log: <?php echo htmlspecialchars($selectedJob); ?></h2>
             <pre><?php echo htmlspecialchars($jobLogContent); ?></pre>
         <?php endif; ?>
-    </div>
-</body>
+    </div >
+</body >
 </html>
