@@ -26,7 +26,7 @@ if (!$jobData) {
 // Set the current working directory to the script's directory to ensure relative paths like config/config.json resolve correctly.
 chdir(__DIR__);
 $llm = $jobData['llm'] ?? 'local';
-$tools = $jobData['tools'] ?? [];
+$enabledTools = $jobData['enabled_tools'] ?? [];
 $prompt = $jobData['prompt'] ?? '';
 
 
@@ -39,8 +39,8 @@ $agent = new Agent(llm: $llm);
 $agent->loadFileCache($jobDir . '/filecache.json');
 
 // Enable tools/tags
-if (!empty($tools)) {
-    $agent->withTools(...$tools);
+if (!empty($enabledTools)) {
+    $agent->withTools(...$enabledTools);
 }
 
 // Run the agent

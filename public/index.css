@@ -32,8 +32,7 @@ button:hover { background: #0056b3; }
     max-height: 0; 
 }
 .collapsible-container.expanded {
-    /* Set a large enough value to allow full expansion */
-    max-height: 1000px; 
+    max-height: max-content; 
 }
 .collapsible-content {
     padding: 0; /* Padding handled by the container */

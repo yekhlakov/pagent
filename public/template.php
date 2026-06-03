@@ -67,16 +67,6 @@
                                 <?php endforeach; ?>
                             </div>
                         <?php endforeach; ?>
-                        
-                        <div style="margin-top: 10px;">
-                            <p style="font-weight: bold; margin: 5px 0;">Other Tools:</p>
-                            <?php foreach ($toolsInfo['tools'] as $toolKey => $toolName): ?>
-                                <label class="tool-item">
-                                    <input type="checkbox" name="tools[]" value="<?php echo htmlspecialchars($toolKey); ?>">
-                                    <?php echo htmlspecialchars($toolKey); ?>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -102,12 +92,13 @@
                     <!-- Collapsible container for prompt -->
                     <div class="collapsible-container" id="prompt" onclick="togglePrompt()">
                         <!-- The prompt content itself, styled to truncate -->
-                        <div class="collapsible-content">
-                            <span class="prompt-text" id="promptDisplay">
-                                <?php echo htmlspecialchars($jobPromptContent); ?>
-                            </span>
+			<div id="promptSource" style="display:none"><?php echo htmlspecialchars($jobPromptContent); ?></div>
+                        <div class="collapsible-content" id="promptMarkdown">
                         </div>
                     </div>
+                <script>
+			document.getElementById('promptMarkdown').innerHTML=marked.parse(document.getElementById('promptSource').textContent)
+		</script>
                 </div>
             <?php endif; ?>
 
@@ -116,15 +107,15 @@
                 <div class="result-display">
                     <h3>✅ Job Result</h3>
                     <!-- Markdown source container -->
-                    <div id="markdownSource" style="display: none;">
-                        <?php echo htmlspecialchars($jobResultContent); ?>
-                    </div>
+                    <div id="outputSource" style="display: none;"><?php echo htmlspecialchars($jobResultContent); ?></div>
                     <!-- HTML output container -->
-                    <div id="output">
+                    <div id="outputMarkdown">
                         <!-- Content will be injected here by JavaScript -->
                     </div>
                 </div>
-                <script>document.getElementById('output').innerHTML=marked.parse(document.getElementById('markdownSource').textContent)</script>
+                <script>
+			document.getElementById('outputMarkdown').innerHTML=marked.parse(document.getElementById('outputSource').textContent)
+		</script>
             <?php endif; ?>
 
             <!-- Display Log (Requirement 2: Collapsible for finished jobs) -->
@@ -149,9 +140,8 @@
 <script>
     // Function to toggle the prompt display (Requirement 3)
     function togglePrompt() {
-        const container = document.querySelector('.collapsible-container#prompt');
-        const span = container.querySelector('.prompt-text');
-        
+        const container = document.querySelector('#prompt');
+
         // Toggle the expanded class to trigger CSS transition
         container.classList.toggle('expanded');
         
@@ -162,7 +152,6 @@
     // Function to toggle the job log display (Requirement 3)
     function toggleLog() {
         const container = document.querySelector('.collapsible-container#log');
-        const content = container.querySelector('.collapsible-content');
 
         // Toggle the expanded class
         container.classList.toggle('expanded');
