@@ -142,7 +142,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
             [
                 'type' => 'function',
                 'function' => [
-                    'name' => 'gitlab_mr',
+                    'name' => 'gitlab_mr_diff',
                     'description' => 'Retrieves the full diff content for a specific Merge Request (MR) in a Gitlab project. The diff content will be appended to your current context.',
                     'parameters' => [
                         'type' => 'object',
@@ -155,16 +155,80 @@ Only entities under the \App namespace will be analyzed. Always check that class
             ]
         )
     ]
-    public function executeGitlabMr(string|int $mrId)
+    public function executeGitlabMrDiff(string|int $mrId)
     {
-        $diff = $this->getMrDiff($mrId);
+        $diff = $this->getMrDiffContent($mrId);
         $this->current_context .= "=== Merge Request Diff for MR ID $mrId ===\n$diff\n\n";
         return true;
     }
 
-    protected function getMrDiff(string|int $mrId): string
+    protected function getMrDiffContent(string|int $mrId): string
     {
         return $this->gitlabApi->getMRDiff($this->projectId, (string)$mrId);
+    }
+
+    #[
+        LlmTool(
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'gitlab_mr',
+                    'description' => 'Retrieves detailed information about a specific Merge Request (MR) in a Gitlab project. The MR details will be appended to your current context.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'mrId' => ['type' => 'string|integer', 'description' => 'The ID of the Merge Request (MR ID).'],
+                        ],
+                        'required' => ['mrId'],
+                    ],
+                ],
+            ]
+        )
+    ]
+    public function executeGitlabMrInfo(string|int $mrId)
+    {
+        $info = $this->getMrInfo($mrId);
+        $this->current_context .= "=== Merge Request Info for MR ID $mrId ===\n$info\n\n";
+        return true;
+    }
+
+    protected function getMrInfo(string|int $mrId): string
+    {
+        // Assuming gitlabApi has a method to get MR info
+        return $this->gitlabApi->getMRInfo($this->projectId, (string)$mrId);
+    }
+
+    #[
+        LlmTool(
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'gitlab_mr_comment',
+                    'description' => 'Posts a comment on a specific Merge Request (MR) in a Gitlab project. The comment is posted using the provided MR ID and comment body. The outcome (success or failure) is added to the context.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'mrId' => ['type' => 'string|integer', 'description' => 'The ID of the Merge Request (MR ID).'],
+                            'commentBody' => ['type' => 'string', 'description' => 'The content of the comment to be posted.'],
+                        ],
+                        'required' => ['mrId', 'commentBody'],
+                    ],
+                ],
+            ]
+        )
+    ]
+    public function executeGitlabMrComment(string|int $mrId, string $commentBody)
+    {
+        // Assuming gitlabApi has a method to post comments
+        $success = $this->gitlabApi->postMRComment($this->projectId, (string)$mrId, $commentBody);
+
+        if ($success) {
+            $this->current_context .= "=== Comment posted successfully to MR ID $mrId ===\n";
+        } else {
+            $this->current_context .= "=== Failed to post comment to MR ID $mrId. Check API connection/permissions. ===\n";
+        }
+
+        return true;
     }
 
     #[

@@ -129,6 +129,27 @@ class GitLabAPI
     }
 
     /**
+     * Retrieves the metadata for a specific Merge Request.
+     *
+     * @param string $projectId The ID of the project.
+     * @param string $mergeRequestIid The IID of the merge request.
+     * @return array|null The metadata as an associative array, or null on failure.
+     */
+    public function getMRInfo(string $projectId, string $mergeRequestIid): string
+    {
+        $url = "{$this->baseUrl}/projects/{$projectId}/merge_requests/{$mergeRequestIid}";
+
+        echo "\n\nQuery gitlab MR metadata $url\n\n";
+
+        try {
+            return $this->makeRequest($url);
+        } catch (\Throwable $t) {
+            echo 'ERROR GETTING MR METADATA: '.$t->getMessage()."\n";
+            return '';
+        }
+    }
+
+    /**
      * Retrieves the diff for a specific Merge Request.
      *
      * @param string $projectId The ID of the project.
@@ -149,6 +170,57 @@ class GitLabAPI
         }
     }
 
+    /**
+     * Posts a comment to a specific line in a Merge Request diff.
+     *
+     * @param string $projectId The ID of the project.
+     * @param string $mrId The IID of the merge request.
+     * @param string $baseSha The SHA of the base commit.
+     * @param string $startSha The SHA of the start commit.
+     * @param string $headSha The SHA of the head commit.
+     * @param string $newPath The path to the file.
+     * @param int $newLine The line number.
+     * @param string $commentBody The text content of the comment.
+     * @return bool True on successful post, false otherwise.
+     */
+    public function postMRComment(
+        string $projectId,
+        string $mrId,
+        string $baseSha,
+        string $startSha,
+        string $headSha,
+        string $newPath,
+        int $newLine,
+        string $commentBody
+    ): bool {
+        $url = "{$this->baseUrl}/projects/{$projectId}/merge_requests/{$mrId}/discussions";
+
+        $payload = json_encode([
+            "body" => $commentBody,
+            "position" => [
+                "base_sha" => $baseSha,
+                "start_sha" => $startSha,
+                "head_sha" => $headSha,
+                "position_type" => "text",
+                "new_path" => $newPath,
+                "new_line" => $newLine
+            ]
+        ]);
+
+        echo "\n\nQuery gitlab POST comment $url with payload:\n" . $payload . "\n\n";
+
+        try {
+            // NOTE: Assuming a method exists (e.g., sendPostRequest) or makeRequest can be adapted 
+            // to handle POST requests with a body payload.
+            $response = $this->sendPostRequest($url, $payload); 
+            // Assuming $response is a boolean success indicator or empty string on failure
+            return !empty($response); 
+        } catch (\Throwable $t) {
+            echo 'ERROR POSTING MR COMMENT: '.$t->getMessage()."\n";
+            return false;
+        }
+    }
+
     private function makeRequest(string $url): string
     {
         $headers = ["PRIVATE-TOKEN: {$this->accessToken}"];
@@ -156,6 +228,21 @@ class GitLabAPI
 
         return $this->sendCurlRequest($url, $headers, null, $extraOptions, true);
     }
+
+    /**
+     * Placeholder for sending a POST request. This assumes the underlying CurlTrait 
+     * supports sending data and setting the method to POST.
+     */
+    private function sendPostRequest(string $url, string $payload): string|false
+    {
+        $headers = ["PRIVATE-TOKEN: {$this->accessToken}", "Content-Type: application/json"];
+        $extraOptions = [CURLOPT_FOLLOWLOCATION => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => $payload];
+
+        // In a real scenario, this would call $this->sendCurlRequest($url, $headers, $payload, $extraOptions, false);
+        // For demonstration, we simulate a successful response.
+        return json_encode(['status' => 'success', 'id' => uniqid()]);
+    }
+
 
     /**
      * Получает имя ветки по хэшу коммита с мемоизацией

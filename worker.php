@@ -44,8 +44,9 @@ The prompt to be analyzed follows:
 ---
 " . $prompt;
 
-    // 2. Initialize a dedicated agent instance for naming (ensuring no tools are available for this call)
+    // 2. Initialize a dedicated agent instance for naming (ensuring no destructive tools are available for this call)
     $namingAgent = new Agent(llm: $llm);
+    $namingAgent->withTools('finish');
     $namingAgent->loadFileCache($jobDir . '/filecache.json');
 
     // 3. Execute the naming agent call (no tools enabled)
@@ -74,7 +75,12 @@ if (!empty($enabledTools)) {
 }
 
 // Run the agent
-$agent->handle($prompt);
+try
+{
+	$agent->handle($prompt);
+} catch (\Throwable $t) {
+	echo "--------- The agent failed with error: " . $t->getMessage() . " ------------\n\n";
+}
 
 // Store file cache
 $agent->storeFileCache($jobDir . '/filecache.json');
