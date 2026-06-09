@@ -24,6 +24,8 @@
             Jobs
             <!-- Requirement 1: New job button -->
             <button onclick="location.href='?job='">New job</button>
+            <!-- Requirement 1: Settings button -->
+            <button onclick="location.href='?view=settings'">Settings</button>
         </h3 >
         <?php foreach ($jobList as $job): ?>
             <div class="job-item <?php echo ($selectedJob === $job['dir']) ? 'selected' : ''; ?>" 
@@ -34,49 +36,8 @@
         <?php endforeach; ?>
     </div>
     <div class="right-column">
-        <?php if (!$selectedJob): ?>
-            <h2>Job Creation Form</h2>
-            <form method="POST">
-                <input type="hidden" name="action" value="create_job">
-                <div class="form-group">
-                    <label for="title">Job Title</label>
-                    <input type="text" name="title" id="title" required>
-                </div>
-                <div class="form-group">
-                    <label for="llm">LLM</label>
-                    <select name="llm" id="llm">
-                        <?php foreach ($config['llm'] as $llmName => $llmConfig): ?>
-                            <option value="<?php echo htmlspecialchars($llmName); ?>"><?php echo htmlspecialchars($llmName); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Enabled Tools & Tags</label>
-                    <div class="tools-container">
-                        <?php foreach ($toolsInfo['tags'] as $tag => $toolKeys): ?>
-                            <div class="tag-group">
-                                <label class="tag-title">
-                                    <input type="checkbox" name="tools[]" value="<?php echo htmlspecialchars($tag); ?>">
-                                    Tag: <?php echo htmlspecialchars($tag); ?>
-                                </label>
-                                <?php foreach ($toolKeys as $toolKey): ?>
-                                    <label class="tool-item">
-                                        <input type="checkbox" name="tools[]" value="<?php echo htmlspecialchars($toolKey); ?>">
-                                        <?php echo htmlspecialchars($toolKey); ?>
-                                    </label>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="prompt">Prompt</label>
-                    <textarea name="prompt" id="prompt" required></textarea>
-                </div>
-                <button type="submit">Create job</button>
-            </form>
-        <?php else: ?>
-            <h2>Job Log: <?php echo htmlspecialchars($selectedJob); ?></h2>
+        <?php if ($selectedJob): ?>
+            <h2 style="margin-top: 0;">Job Log: <?php echo htmlspecialchars($selectedJob); ?></h2>
             
             <!-- Requirement 2: Delete Job Button -->
             <form method="POST" style="margin-bottom: 15px;">
@@ -132,9 +93,65 @@
                 <pre><?php echo htmlspecialchars($jobLogContent); ?></pre>
             <?php endif; ?>
 
+        <?php elseif (isset($_GET['view']) && $_GET['view'] === 'settings'): ?>
+            <!-- NEW: Settings Form Stub -->
+            <h2 style="margin-top: 0;">System Settings</h2>
+            <form method="POST">
+                <div class="form-group">
+                    <label for="setting_key">Setting Key</label>
+                    <input type="text" name="setting_key" id="setting_key" placeholder="e.g., timezone">
+                </div>
+                <div class="form-group">
+                    <label for="setting_value">Value</label>
+                    <input type="text" name="setting_value" id="setting_value">
+                </div>
+                <button type="submit">Save Settings</button>
+            </form>
+
+        <?php else: ?>
+            <h2 style="margin-top: 0;">Job Creation Form</h2>
+            <form method="POST">
+                <input type="hidden" name="action" value="create_job">
+                <div class="form-group">
+                    <label for="title">Job Title</label>
+                    <input type="text" name="title" id="title">
+                </div>
+                <div class="form-group">
+                    <label for="llm">LLM</label>
+                    <select name="llm" id="llm">
+                        <?php foreach ($config['llm'] as $llmName => $llmConfig): ?>
+                            <option value="<?php echo htmlspecialchars($llmName); ?>"><?php echo htmlspecialchars($llmName); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Enabled Tools & Tags</label>
+                    <div class="tools-container">
+                        <?php foreach ($toolsInfo['tags'] as $tag => $toolKeys): ?>
+                            <div class="tag-group">
+                                <label class="tag-title">
+                                    <input type="checkbox" name="tools[]" value="<?php echo htmlspecialchars($tag); ?>">
+                                    Tag: <?php echo htmlspecialchars($tag); ?>
+                                </label>
+                                <?php foreach ($toolKeys as $toolKey): ?>
+                                    <label class="tool-item">
+                                        <input type="checkbox" name="tools[]" value="<?php echo htmlspecialchars($toolKey); ?>">
+                                        <?php echo htmlspecialchars($toolKey); ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="prompt">Prompt</label>
+                    <textarea name="prompt" id="prompt" required></textarea>
+                </div>
+                <button type="submit">Create job</button>
+            </form>
         <?php endif; ?>
     </div>
-</body>
+</body >
 </html>
 
 <script>

@@ -33,7 +33,9 @@ $config = json_decode(file_get_contents($configPath), true);
 // 2. Handle Job Creation and Deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'create_job') {
-        $title = $_POST['title'] ?? 'Untitled Job';
+        // MODIFICATION: Use isset() to ensure an empty string is accepted if posted, 
+        // and only default to 'Untitled Job' if the field is entirely missing.
+        $title = isset($_POST['title']) ? $_POST['title'] : 'Untitled Job'; 
         $llm = $_POST['llm'] ?? 'local';
         $prompt = $_POST['prompt'] ?? '';
         $enabledTools = $_POST['tools'] ?? [];
@@ -77,7 +79,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // On Windows, to truly detach, one might use 'start /B' in the command.
             // But we follow the instruction to use proc_open.
         }
-
         // Redirect to the new job
         header("Location: index.php?job=" . urlencode($jobDirName));
         exit;

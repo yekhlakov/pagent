@@ -29,16 +29,46 @@ $llm = $jobData['llm'] ?? 'local';
 $enabledTools = $jobData['enabled_tools'] ?? [];
 $prompt = $jobData['prompt'] ?? '';
 
+// --- START: Job Title Check and Naming Agent Call ---
+
+// Check if the job title is empty
+if (empty($jobData['job_title'] ?? '')) {
+    echo "Job title is empty. Executing agent call to determine job name...\n";
+    
+    // 1. Construct the naming prompt
+    $namingPrompt = "Figure out the name for an AI agent job given the prompt to the agent.
+The name must be short (single line, up to 10 words) but descriptive.
+IF the prompt explicitly mentions the output language, the name must be in this language.
+Return ONLY the name string with no additional data.
+The prompt to be analyzed follows:
+---
+" . $prompt;
+
+    // 2. Initialize a dedicated agent instance for naming (ensuring no tools are available for this call)
+    $namingAgent = new Agent(llm: $llm);
+    $namingAgent->loadFileCache($jobDir . '/filecache.json');
+
+    // 3. Execute the naming agent call (no tools enabled)
+    $namingAgent->handle($namingPrompt);
+
+    // 4. Store the agent-produced job name
+    $jobName = $namingAgent->getResult();
+    $jobData['job_name'] = $jobName;
+    file_put_contents($jobJsonPath, json_encode($jobData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    echo "Job name determined: " . $jobName . "\n";
+}
+
+// --- END: Job Title Check and Naming Agent Call ---
+
 
 // Use the timezone from config if possible, but Agent handles it.
 // We just need to pass the llm and tools.
 
 $agent = new Agent(llm: $llm);
-
 // Load existing file cache if it exists
 $agent->loadFileCache($jobDir . '/filecache.json');
 
-// Enable tools/tags
+// Enable tools/tags (for the main job execution)
 if (!empty($enabledTools)) {
     $agent->withTools(...$enabledTools);
 }
