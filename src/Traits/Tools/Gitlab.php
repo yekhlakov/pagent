@@ -204,12 +204,17 @@ Only entities under the \App namespace will be analyzed. Always check that class
                 'type' => 'function',
                 'function' => [
                     'name' => 'gitlab_mr_comment',
-                    'description' => 'Posts a comment on a specific Merge Request (MR) in a Gitlab project. The comment is posted using the provided MR ID and comment body. The outcome (success or failure) is added to the context.',
+                    'description' => 'Posts a detailed comment on a specific line in a Merge Request (MR) in a Gitlab project. If line-specific details (baseSha, startSha, headSha, newPath, newLine) are not provided, it falls back to posting a general note.',
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
                             'mrId' => ['type' => 'string|integer', 'description' => 'The ID of the Merge Request (MR ID).'],
                             'commentBody' => ['type' => 'string', 'description' => 'The content of the comment to be posted.'],
+                            'baseSha' => ['type' => 'string', 'description' => 'The SHA of the base commit (required for line commenting).'],
+                            'startSha' => ['type' => 'string', 'description' => 'The SHA of the start commit (required for line commenting).'],
+                            'headSha' => ['type' => 'string', 'description' => 'The SHA of the head commit (required for line commenting).'],
+                            'newPath' => ['type' => 'string', 'description' => 'The path to the file (required for line commenting).'],
+                            'newLine' => ['type' => 'integer', 'description' => 'The line number (required for line commenting).'],
                         ],
                         'required' => ['mrId', 'commentBody'],
                     ],
@@ -217,15 +222,78 @@ Only entities under the \App namespace will be analyzed. Always check that class
             ]
         )
     ]
-    public function executeGitlabMrComment(string|int $mrId, string $commentBody)
+    public function executeGitlabMrComment(
+        string|int $mrId, 
+        string $commentBody, 
+        ?string $baseSha = null, 
+        ?string $startSha = null, 
+        ?string $headSha = null, 
+        ?string $newPath = null, 
+        ?int $newLine = null
+    )
     {
-        // Assuming gitlabApi has a method to post comments
-        $success = $this->gitlabApi->postMRComment($this->projectId, (string)$mrId, $commentBody);
+        // Check if all line-specific arguments are present
+        $isLineComment = $baseSha !== null && $startSha !== null && $headSha !== null && $newPath !== null && $newLine !== null;
+
+        if ($isLineComment) {
+            // Post detailed line comment
+            $success = $this->gitlabApi->postMRComment(
+                $this->projectId, 
+                (string)$mrId, 
+                $baseSha, 
+                $startSha, 
+                $headSha, 
+                $newPath, 
+                $newLine, 
+                $commentBody
+            );
+
+            if ($success) {
+                $this->current_context .= "=== Line comment posted successfully to MR ID $mrId at line $newLine ===\n";
+            } else {
+                $this->current_context .= "=== Failed to post line comment to MR ID $mrId. Check API connection/permissions. ===\n";
+            }
+        } else {
+            // Fallback to general note
+            $success = $this->gitlabApi->postGeneralMRComment($this->projectId, (string)$mrId, $commentBody);
+
+            if ($success) {
+                $this->current_context .= "=== General note posted successfully to MR ID $mrId (Fallback) ===\n";
+            } else {
+                $this->current_context .= "=== Failed to post general note to MR ID $mrId. Check API connection/permissions. ===\n";
+            }
+        }
+
+        return true;
+    }
+
+    #[
+        LlmTool(
+            [
+                'type' => 'function',
+                'function' => [
+                    'name' => 'gitlab_mr_note',
+                    'description' => 'Posts a general, non-line-specific note/comment on a specific Merge Request (MR) in a Gitlab project. The outcome (success or failure) is added to the context.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'mrId' => ['type' => 'string|integer', 'description' => 'The ID of the Merge Request (MR ID).'],
+                            'commentBody' => ['type' => 'string', 'description' => 'The content of the note/comment to be posted.'],
+                        ],
+                        'required' => ['mrId', 'commentBody'],
+                    ],
+                ],
+            ]
+        )
+    ]
+    public function executeGitlabMrNote(string|int $mrId, string $commentBody)
+    {
+        $success = $this->gitlabApi->postGeneralMRComment($this->projectId, (string)$mrId, $commentBody);
 
         if ($success) {
-            $this->current_context .= "=== Comment posted successfully to MR ID $mrId ===\n";
+            $this->current_context .= "=== General note posted successfully to MR ID $mrId ===\n";
         } else {
-            $this->current_context .= "=== Failed to post comment to MR ID $mrId. Check API connection/permissions. ===\n";
+            $this->current_context .= "=== Failed to post general note to MR ID $mrId. Check API connection/permissions. ===\n";
         }
 
         return true;

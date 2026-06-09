@@ -221,6 +221,36 @@ class GitLabAPI
         }
     }
 
+    /**
+     * Posts a general comment to a Merge Request (not tied to a specific line).
+     *
+     * @param string $projectId The ID of the project.
+     * @param string $mrId The IID of the merge request.
+     * @param string $commentBody The text content of the comment.
+     * @return bool True on successful post, false otherwise.
+     */
+    public function postGeneralMRComment(
+        string $projectId,
+        string $mrId,
+        string $commentBody
+    ): bool {
+        $url = "{$this->baseUrl}/projects/{$projectId}/merge_requests/{$mrId}/notes";
+
+        // Change payload to form-data: body=URLENCODED_COMMENT_TEXT_HERE
+        $payload = "body=" . urlencode($commentBody);
+
+        echo "\n\nQuery gitlab POST general MR comment $url with payload:\n" . $payload . "\n\n";
+
+        try {
+            // Pass the payload and specify the content type for form data
+            $response = $this->sendPostRequest($url, $payload); 
+            return !empty($response); 
+        } catch (\Throwable $t) {
+            echo 'ERROR POSTING GENERAL MR COMMENT: '.$t->getMessage()."\n";
+            return false;
+        }
+    }
+
     private function makeRequest(string $url): string
     {
         $headers = ["PRIVATE-TOKEN: {$this->accessToken}"];
@@ -232,15 +262,21 @@ class GitLabAPI
     /**
      * Placeholder for sending a POST request. This assumes the underlying CurlTrait 
      * supports sending data and setting the method to POST.
+     * 
+     * @param string $url The target URL.
+     * @param string $payload The request body.
+     * @param string $contentType The content type of the payload (e.g., application/json, application/x-www-form-urlencoded).
      */
-    private function sendPostRequest(string $url, string $payload): string|false
+    private function sendPostRequest(string $url, string $payload, ?string $contentType = null): string|false
     {
-        $headers = ["PRIVATE-TOKEN: {$this->accessToken}", "Content-Type: application/json"];
+        $headers = ["PRIVATE-TOKEN: " . $this->accessToken];
+	if (!empty($contentType)) {
+		$headers[] = "Content-Type: " . $contentType;
+	}
+
         $extraOptions = [CURLOPT_FOLLOWLOCATION => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => $payload];
 
-        // In a real scenario, this would call $this->sendCurlRequest($url, $headers, $payload, $extraOptions, false);
-        // For demonstration, we simulate a successful response.
-        return json_encode(['status' => 'success', 'id' => uniqid()]);
+        return $this->sendCurlRequest($url, $headers, $payload, $extraOptions, false);
     }
 
 
