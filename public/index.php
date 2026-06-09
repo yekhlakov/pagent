@@ -167,5 +167,5 @@ try {
 }
 ob_end_clean(); // Discard buffered output
 
-// Include the template
-include 'template.php';
+// Include the template wrapper
+include 'template_wrapper.php';

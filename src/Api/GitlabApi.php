@@ -128,6 +128,27 @@ class GitLabAPI
         return $result;
     }
 
+    /**
+     * Retrieves the diff for a specific Merge Request.
+     *
+     * @param string $projectId The ID of the project.
+     * @param string $mergeRequestIid The IID of the merge request.
+     * @return string The raw JSON response containing the diff, or an empty string on failure.
+     */
+    public function getMRDiff(string $projectId, string $mergeRequestIid): string
+    {
+        $url = "{$this->baseUrl}/projects/{$projectId}/merge_requests/{$mergeRequestIid}/changes";
+
+        echo "\n\nQuery gitlab MR diff $url\n\n";
+
+        try {
+            return $this->makeRequest($url);
+        } catch (\Throwable $t) {
+            echo 'ERROR GETTING MR DIFF: '.$t->getMessage()."\n";
+            return '';
+        }
+    }
+
     private function makeRequest(string $url): string
     {
         $headers = ["PRIVATE-TOKEN: {$this->accessToken}"];

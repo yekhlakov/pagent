@@ -142,6 +142,36 @@ Only entities under the \App namespace will be analyzed. Always check that class
             [
                 'type' => 'function',
                 'function' => [
+                    'name' => 'gitlab_mr',
+                    'description' => 'Retrieves the full diff content for a specific Merge Request (MR) in a Gitlab project. The diff content will be appended to your current context.',
+                    'parameters' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'mrId' => ['type' => 'string|integer', 'description' => 'The ID of the Merge Request (MR ID).'],
+                        ],
+                        'required' => ['mrId'],
+                    ],
+                ],
+            ]
+        )
+    ]
+    public function executeGitlabMr(string|int $mrId)
+    {
+        $diff = $this->getMrDiff($mrId);
+        $this->current_context .= "=== Merge Request Diff for MR ID $mrId ===\n$diff\n\n";
+        return true;
+    }
+
+    protected function getMrDiff(string|int $mrId): string
+    {
+        return $this->gitlabApi->getMRDiff($this->projectId, (string)$mrId);
+    }
+
+    #[
+        LlmTool(
+            [
+                'type' => 'function',
+                'function' => [
                     'name' => 'gitlab_ls',
                     'description' => 'If you need to list of all php entities in a namespace in Gitlab project, use this function.
 The list will be appended to your context.

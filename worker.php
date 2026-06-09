@@ -32,8 +32,8 @@ $prompt = $jobData['prompt'] ?? '';
 // --- START: Job Title Check and Naming Agent Call ---
 
 // Check if the job title is empty
-if (empty($jobData['job_title'] ?? '')) {
-    echo "Job title is empty. Executing agent call to determine job name...\n";
+if (empty($jobData['title'] ?? '')) {
+    echo "Job title is empty. Executing agent call to determine it...\n";
     
     // 1. Construct the naming prompt
     $namingPrompt = "Figure out the name for an AI agent job given the prompt to the agent.
@@ -53,9 +53,9 @@ The prompt to be analyzed follows:
 
     // 4. Store the agent-produced job name
     $jobName = $namingAgent->getResult();
-    $jobData['job_name'] = $jobName;
+    $jobData['title'] = $jobName;
     file_put_contents($jobJsonPath, json_encode($jobData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
-    echo "Job name determined: " . $jobName . "\n";
+    echo "Job title determined: " . $jobName . "\n";
 }
 
 // --- END: Job Title Check and Naming Agent Call ---
