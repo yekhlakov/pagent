@@ -74,6 +74,11 @@ if (!empty($enabledTools)) {
     $agent->withTools(...$enabledTools);
 }
 
+if (!empty($jobData['tool_parameters']['gitlab']['project_id']))
+{
+	$agent->withProjectId($jobData['tool_parameters']['gitlab']['project_id']);
+}
+
 // Run the agent
 try
 {

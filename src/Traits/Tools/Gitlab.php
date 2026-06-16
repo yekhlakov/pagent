@@ -41,6 +41,21 @@ Only entities under the \App namespace will be returned. Always check that class
         return $fileName.'.php';
     }
 
+    protected $projectIdOverride = null;
+
+	public function withProjectId($id)
+	{
+		$this->projectIdOverride = $id;
+
+		return $this;
+	}
+
+	public function getProjectId()
+	{
+		return $this->projectIdOverride ?? $this->projectId;
+	}
+
+
     protected function getGitlabFile(string $className)
     {
         $fileName = $this->getFileNameFromClassName($className);
@@ -61,7 +76,7 @@ Only entities under the \App namespace will be returned. Always check that class
             return "=== You have already requested source code for $className, see above ===\n\n";
         }
 
-        $content = $this->gitlabApi->getFile($this->projectId, $fileName);
+        $content = $this->gitlabApi->getFile($this->getProjectId(), $fileName);
 
         if (empty($content)) {
             return "$errorMessage\n\n";
@@ -71,7 +86,7 @@ Only entities under the \App namespace will be returned. Always check that class
 
         $testFileName = 'tests/Unit/'.str_replace('.php', 'Test.php', $fileName);
 
-        $testContent = $this->gitlabApi->getFile($this->projectId, $testFileName);
+        $testContent = $this->gitlabApi->getFile($this->getProjectId(), $testFileName);
 
         if (! empty($testContent)) {
             $content .= "$testMessage\n$testContent\n\n";
@@ -124,7 +139,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
             return "!!! You already requested blame for $className and it was not available !!!\n";
         }
 
-        $blames = $this->gitlabApi->getCommitsForRange($this->projectId, $this->getFileNameFromClassName($className), $from, $to);
+        $blames = $this->gitlabApi->getCommitsForRange($this->getProjectId(), $this->getFileNameFromClassName($className), $from, $to);
 
         if (empty($blames)) {
             return "$errorMessage\n";
@@ -164,7 +179,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
 
     protected function getMrDiffContent(string|int $mrId): string
     {
-        return $this->gitlabApi->getMRDiff($this->projectId, (string)$mrId);
+        return $this->gitlabApi->getMRDiff($this->getProjectId(), (string)$mrId);
     }
 
     #[
@@ -195,7 +210,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
     protected function getMrInfo(string|int $mrId): string
     {
         // Assuming gitlabApi has a method to get MR info
-        return $this->gitlabApi->getMRInfo($this->projectId, (string)$mrId);
+        return $this->gitlabApi->getMRInfo($this->getProjectId(), (string)$mrId);
     }
 
     #[
@@ -238,7 +253,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
         if ($isLineComment) {
             // Post detailed line comment
             $success = $this->gitlabApi->postMRComment(
-                $this->projectId, 
+                $this->getProjectId(), 
                 (string)$mrId, 
                 $baseSha, 
                 $startSha, 
@@ -255,7 +270,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
             }
         } else {
             // Fallback to general note
-            $success = $this->gitlabApi->postGeneralMRComment($this->projectId, (string)$mrId, $commentBody);
+            $success = $this->gitlabApi->postGeneralMRComment($this->getProjectId(), (string)$mrId, $commentBody);
 
             if ($success) {
                 $this->current_context .= "=== General note posted successfully to MR ID $mrId (Fallback) ===\n";
@@ -288,7 +303,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
     ]
     public function executeGitlabMrNote(string|int $mrId, string $commentBody)
     {
-        $success = $this->gitlabApi->postGeneralMRComment($this->projectId, (string)$mrId, $commentBody);
+        $success = $this->gitlabApi->postGeneralMRComment($this->getProjectId(), (string)$mrId, $commentBody);
 
         if ($success) {
             $this->current_context .= "=== General note posted successfully to MR ID $mrId ===\n";
@@ -348,7 +363,7 @@ Only namespaces under \App will be available.
     protected function listNamespaceFiles($namespace): array
     {
         $dirName = lcfirst(trim(str_replace('\\', '/', $namespace), ' /\\'));
-        $contents = $this->gitlabApi->getDirectoryContents($this->projectId, $dirName);
+        $contents = $this->gitlabApi->getDirectoryContents($this->getProjectId(), $dirName);
 
         $classes = [];
 

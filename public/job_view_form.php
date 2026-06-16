@@ -1,5 +1,12 @@
 <?php if ($selectedJob): ?>
     <h2 style="margin-top: 0;">Job Log: <?php echo htmlspecialchars($selectedJob); ?></h2>
+
+    <!-- Display Project ID -->
+    <?php if (!empty($jobToolParameters['gitlab']['project_id'])): ?>
+        <div class="job-metadata" style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9;">
+            <p><strong>Project ID:</strong> <?php echo htmlspecialchars($jobToolParameters['gitlab']['project_id']); ?></p>
+        </div>
+    <?php endif; ?>
     
     <!-- Requirement 2: Delete Job Button -->
     <form method="POST" style="margin-bottom: 15px;">
@@ -24,6 +31,7 @@
             </script>
         </div>
     <?php endif; ?>
+
 
     <?php if ($jobResultContent): ?>
         <!-- Display Result (Requirement 1 & 2) -->

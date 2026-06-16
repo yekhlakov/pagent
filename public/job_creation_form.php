@@ -13,6 +13,15 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <!-- Tool Parameters Section -->
+                <div class="form-group">
+                    <label>Tool Parameters</label>
+		    <div class="form-group">
+			<label>Gitlab Project Id</label>
+			<input type="text" name="tool_parameters.gitlab.project_id" id="tool_parameters.gitlab.project_id" value="<?php echo htmlspecialchars($config['gitlab']['project_id']); ?>" style="width: 100%; padding: 8px; border: 1px solid #ccc;">
+		    </div>
+                </div>
+                <!-- End Tool Parameters Section -->
                 <div class="form-group">
                     <label>Enabled Tools & Tags</label>
                     <div class="tools-container">

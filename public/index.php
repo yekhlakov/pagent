@@ -57,8 +57,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'prompt' => $prompt,
             'enabled_tools' => $enabledTools,
             'created_at' => $dateStr,
-            'is_running' => true // Set to true on creation
+            'is_running' => true, // Set to true on creation
+	    'tool_parameters' => [
+		'gitlab' => [
+		    'project_id' => $_POST['tool_parameters_gitlab_project_id'] ?? $config['gitlab']['project_id'] ?? null,
+		],
+	    ],
         ];
+
         file_put_contents($jobDirPath . '/job.json', json_encode($jobJson, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         file_put_contents($jobDirPath . '/job.log', "");
         file_put_contents($jobDirPath . '/filecache.json', "{}");
@@ -125,6 +131,7 @@ $jobLogContent = "";
 $jobResultContent = null; 
 $isJobRunning = false; 
 $jobPromptContent = ''; // New variable for prompt
+$jobToolParameters = [];
 if ($selectedJob) {
     $jobPath = $jobsDir . '/' . $selectedJob;
     $jobJsonPath = $jobPath . '/job.json';
@@ -138,6 +145,7 @@ if ($selectedJob) {
         $jobData = json_decode(file_get_contents($jobJsonPath), true);
         // Requirement 4: Check is_running status
         $isJobRunning = $jobData['is_running'] ?? false; 
+	$jobToolParameters = $jobData['tool_parameters'] ?? [];
         
         // Requirement 1: Get prompt and result
         $jobPromptContent = $jobData['prompt'] ?? '';
