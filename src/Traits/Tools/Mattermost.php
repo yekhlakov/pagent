@@ -38,7 +38,7 @@ trait Mattermost
     public function mm_post(string $channelId, string $content, bool $finish = false)
     {
         try {
-            $this->mmApi->postToMattermost($channelId, $content);
+            $this->mmApi->postPost($channelId, $content);
             $this->current_context .= "--- The post was successfully posted to Mattermost channel `$channelId` ---\n";
 
             return ! $finish;

@@ -212,6 +212,11 @@ trait Filesystem
         $absolutePath = $this->getAbsoluteFilePath($fileName);
 
         try {
+            $directory = dirname($absolutePath);
+            if (! is_dir($directory)) {
+                mkdir($directory, 0777, true);
+            }
+
             $success = file_put_contents($absolutePath, $content);
 
             if ($success !== false) {
