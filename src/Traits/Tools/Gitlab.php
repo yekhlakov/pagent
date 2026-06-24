@@ -12,89 +12,31 @@ trait Gitlab
                 'type' => 'function',
                 'function' => [
                     'name' => 'gitlab_file',
-                    'description' => 'If you need source code for a php entity (class, attribute, interface, trait) in a Gitlab project, use this function to get it by its fully qualified name.
-The content of the file containing this entity (and associated test, if there\'s one) will be appended to your current context.
-Only entities under the \App namespace will be returned. Always check that className contains namespace.
-',
+                    'description' => 'Retrieves source code for php files (*.php) or php entities (class, attribute, interface, trait) from a Gitlab project. The content of the files (and associated test, if there\'s one) will be appended to your current context. Only entities under the \App namespace will be returned.',
                     'parameters' => [
                         'type' => 'object',
                         'properties' => [
-                            'className' => ['type' => 'string', 'desription' => 'Fully qualified name of the class (interface etc), including full namespace, eg `App\Handlers\DefaultHandler`'],
+                            'names' => [
+                                'type' => 'array', 
+                                'items' => ['type' => 'string'], 
+                                'description' => 'Array of fully qualified names of the classes (interface etc) or file paths to retrieve, e.g., ["App\\Handlers\\DefaultHandler", "app/Services/AnotherService.php"]'
+                            ],
                         ],
-                        'required' => ['className'],
+                        'required' => ['names'],
                     ],
                 ],
             ]
         )
     ]
-    public function executeGitlabFile(string $className)
+    public function executeGitlabFile(array $names)
     {
-        $this->current_context .= $this->getGitlabFile($className);
+        foreach ($names as $name) {
+            $this->current_context .= $this->getVcsFile($this->gitlabApi, $name);
+        }
 
         return true;
     }
 
-    protected function getFileNameFromClassName(string $className)
-    {
-        $fileName = lcfirst(trim(str_replace('\\', '/', $className), ' /\\'));
-
-        return $fileName.'.php';
-    }
-
-    protected $projectIdOverride = null;
-
-	public function withProjectId($id)
-	{
-		$this->projectIdOverride = $id;
-
-		return $this;
-	}
-
-	public function getProjectId()
-	{
-		return $this->projectIdOverride ?? $this->projectId;
-	}
-
-
-    protected function getGitlabFile(string $className)
-    {
-        $fileName = $this->getFileNameFromClassName($className);
-
-        $errorMessage = "!!! Source code for $className you requested is unavailable! Check if you have provided correct (fully qualified) class name with correct namespace !!!";
-        $classMessage = "=== Source code for $className ===";
-        $testMessage = "=== Source code of a test for $className ===";
-
-        // Check if we've already loaded the file
-
-        // We tried and failed, notify the model about that
-        if (str_contains($this->current_context, $errorMessage)) {
-            return "!!! You have already requested source code for $className and it could not be retrieved !!!\n\n";
-        }
-
-        // We did, refer to the previously attached file.
-        if (str_contains($this->current_context, $classMessage)) {
-            return "=== You have already requested source code for $className, see above ===\n\n";
-        }
-
-        $content = $this->gitlabApi->getFile($this->getProjectId(), $fileName);
-
-        if (empty($content)) {
-            return "$errorMessage\n\n";
-        }
-
-        $content = "$classMessage\n$content\n\n";
-
-        $testFileName = 'tests/Unit/'.str_replace('.php', 'Test.php', $fileName);
-
-        $testContent = $this->gitlabApi->getFile($this->getProjectId(), $testFileName);
-
-        if (! empty($testContent)) {
-            $content .= "$testMessage\n$testContent\n\n";
-        }
-
-        return $content;
-
-    }
 
     #[
         LlmTool(
@@ -148,7 +90,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
         return "$successMessage\n".
             "| Branch name | Commit message |\n".
             "| --- | --- |\n".
-            implode("\n", array_map(fn ($blame) => '| '.$blame['branch'].' | '.$blame['commit_message'].' |', $blames)).
+            implode("\n", array_map(fn ($blame) => '| ' . $blame['branch'] . ' | ' . $blame['commit_message'] . ' |', $blame)).
             "\n";
     }
 
@@ -231,7 +173,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
                             'newPath' => ['type' => 'string', 'description' => 'The path to the file (required for line commenting).'],
                             'newLine' => ['type' => 'integer', 'description' => 'The line number (required for line commenting).'],
                         ],
-                        'required' => ['mrId', 'commentBody'],
+                        'required' => ['mrId', 'commentBody', 'baseSha', 'startSha', 'headSha', 'newPath', 'newLine'],
                     ],
                 ],
             ]
@@ -270,13 +212,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
             }
         } else {
             // Fallback to general note
-            $success = $this->gitlabApi->postGeneralMRComment($this->getProjectId(), (string)$mrId, $commentBody);
-
-            if ($success) {
-                $this->current_context .= "=== General note posted successfully to MR ID $mrId (Fallback) ===\n";
-            } else {
-                $this->current_context .= "=== Failed to post general note to MR ID $mrId. Check API connection/permissions. ===\n";
-            }
+	    $this->executeGitlabMrNote($mrId, $commentBody);
         }
 
         return true;

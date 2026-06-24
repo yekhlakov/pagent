@@ -7,6 +7,12 @@
         "baseUrl": "https://gitlab.com/api/v4/",
         "accessToken": "12345"
     },
+
+    "bitbucket": {
+        "baseUrl": "https://bitbucket.com/rest/api/1.0/",
+        "accessToken": "12345"
+    },
+
     "jira": {
         "apiUrl": "https://jira.com/",
         "apiToken": "123456",

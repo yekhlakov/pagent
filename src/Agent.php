@@ -2,20 +2,24 @@
 
 namespace Yekhlakov\PAgent;
 
+use Yekhlakov\PAgent\Api\BitbucketApi;
 use Yekhlakov\PAgent\Api\GitlabApi;
 use Yekhlakov\PAgent\Api\JiraApi;
 use Yekhlakov\PAgent\Api\LlmApi;
 use Yekhlakov\PAgent\Api\MattermostApi;
 use Yekhlakov\PAgent\Traits\ToolCallRouterTrait;
+use Yekhlakov\PAgent\Traits\Tools\Bitbucket;
 use Yekhlakov\PAgent\Traits\Tools\Cache;
 use Yekhlakov\PAgent\Traits\Tools\Filesystem;
 use Yekhlakov\PAgent\Traits\Tools\Finish;
 use Yekhlakov\PAgent\Traits\Tools\Gitlab;
 use Yekhlakov\PAgent\Traits\Tools\Jira;
 use Yekhlakov\PAgent\Traits\Tools\Mattermost;
+use Yekhlakov\PAgent\Traits\Tools\Vcs;
 
 class Agent
 {
+    use Bitbucket;
     use Cache;
     use Filesystem;
     use Finish;
@@ -23,6 +27,7 @@ class Agent
     use Jira;
     use Mattermost;
     use ToolCallRouterTrait;
+    use Vcs;
 
     private string $id;
 
@@ -34,12 +39,14 @@ class Agent
 
     private string $current_context = '';
 
-    private string $result = '';
+    private ?string $result = '';
 
     public function getResult()
     {
         return $this->result;
     }
+
+    private BitbucketApi $bitbucketApi;
 
     private GitlabApi $gitlabApi;
 
@@ -98,6 +105,11 @@ If the information provided to you by the user is insufficient to perform your t
         }
 
         // 1. Initialize APIs
+
+	$this->bitbucketApi = new BitbucketApi(
+            $this->config['bitbucket']['baseUrl'],
+            $this->config['bitbucket']['accessToken']
+	);
 
         $this->gitlabApi = new GitlabApi(
             $this->config['gitlab']['baseUrl'],
@@ -215,7 +227,7 @@ If the information provided to you by the user is insufficient to perform your t
             echo "--------------- Agent {$this->id} is processing LLM response ---------------\n";
 
             // Add reasoning to the context
-            $reasoning = $result['choices'][0]['message']['reasoning_content'] ?? '';
+            $reasoning = $result['reasoning_content'] ?? '';
             if (! empty($reasoning)) {
                 $this->current_context .= '**You reasoned**: '.$reasoning."\n";
             }
