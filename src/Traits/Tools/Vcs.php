@@ -2,40 +2,35 @@
 
 namespace Yekhlakov\PAgent\Traits\Tools;
 
-
-
 trait Vcs
 {
-
     protected function getFileNameFromClassName(string $className)
     {
         $fileName = lcfirst(trim(str_replace('\\', '/', $className), ' /\\'));
 
-	if (!str_ends_with($fileName, '.php'))
-	{
-		$fileName .= '.php';
-	}
+        if (! str_ends_with($fileName, '.php')) {
+            $fileName .= '.php';
+        }
 
         return $fileName;
     }
 
     protected $projectIdOverride = null;
 
-	public function withProjectId($id)
-	{
-		$this->projectIdOverride = $id;
+    public function withProjectId($id)
+    {
+        $this->projectIdOverride = $id;
 
-		return $this;
-	}
+        return $this;
+    }
 
-	public function getProjectId()
-	{
-		return $this->projectIdOverride ?? $this->projectId;
-	}
+    public function getProjectId()
+    {
+        return $this->projectIdOverride ?? $this->projectId;
+    }
 
-
-	protected function getVcsFile($api, $name)
-	{
+    protected function getVcsFile($api, $name)
+    {
 
         $fileName = $this->getFileNameFromClassName($className);
 
@@ -73,6 +68,5 @@ trait Vcs
 
         return $content;
 
-	}
-
+    }
 }

@@ -17,9 +17,9 @@ trait Gitlab
                         'type' => 'object',
                         'properties' => [
                             'names' => [
-                                'type' => 'array', 
-                                'items' => ['type' => 'string'], 
-                                'description' => 'Array of fully qualified names of the classes (interface etc) or file paths to retrieve, e.g., ["App\\Handlers\\DefaultHandler", "app/Services/AnotherService.php"]'
+                                'type' => 'array',
+                                'items' => ['type' => 'string'],
+                                'description' => 'Array of fully qualified names of the classes (interface etc) or file paths to retrieve, e.g., ["App\\Handlers\\DefaultHandler", "app/Services/AnotherService.php"]',
                             ],
                         ],
                         'required' => ['names'],
@@ -36,7 +36,6 @@ trait Gitlab
 
         return true;
     }
-
 
     #[
         LlmTool(
@@ -90,7 +89,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
         return "$successMessage\n".
             "| Branch name | Commit message |\n".
             "| --- | --- |\n".
-            implode("\n", array_map(fn ($blame) => '| ' . $blame['branch'] . ' | ' . $blame['commit_message'] . ' |', $blame)).
+            implode("\n", array_map(fn ($blame) => '| '.$blame['branch'].' | '.$blame['commit_message'].' |', $blame)).
             "\n";
     }
 
@@ -116,12 +115,13 @@ Only entities under the \App namespace will be analyzed. Always check that class
     {
         $diff = $this->getMrDiffContent($mrId);
         $this->current_context .= "=== Merge Request Diff for MR ID $mrId ===\n$diff\n\n";
+
         return true;
     }
 
     protected function getMrDiffContent(string|int $mrId): string
     {
-        return $this->gitlabApi->getMRDiff($this->getProjectId(), (string)$mrId);
+        return $this->gitlabApi->getMRDiff($this->getProjectId(), (string) $mrId);
     }
 
     #[
@@ -146,13 +146,14 @@ Only entities under the \App namespace will be analyzed. Always check that class
     {
         $info = $this->getMrInfo($mrId);
         $this->current_context .= "=== Merge Request Info for MR ID $mrId ===\n$info\n\n";
+
         return true;
     }
 
     protected function getMrInfo(string|int $mrId): string
     {
         // Assuming gitlabApi has a method to get MR info
-        return $this->gitlabApi->getMRInfo($this->getProjectId(), (string)$mrId);
+        return $this->gitlabApi->getMRInfo($this->getProjectId(), (string) $mrId);
     }
 
     #[
@@ -180,28 +181,27 @@ Only entities under the \App namespace will be analyzed. Always check that class
         )
     ]
     public function executeGitlabMrComment(
-        string|int $mrId, 
-        string $commentBody, 
-        ?string $baseSha = null, 
-        ?string $startSha = null, 
-        ?string $headSha = null, 
-        ?string $newPath = null, 
+        string|int $mrId,
+        string $commentBody,
+        ?string $baseSha = null,
+        ?string $startSha = null,
+        ?string $headSha = null,
+        ?string $newPath = null,
         ?int $newLine = null
-    )
-    {
+    ) {
         // Check if all line-specific arguments are present
         $isLineComment = $baseSha !== null && $startSha !== null && $headSha !== null && $newPath !== null && $newLine !== null;
 
         if ($isLineComment) {
             // Post detailed line comment
             $success = $this->gitlabApi->postMRComment(
-                $this->getProjectId(), 
-                (string)$mrId, 
-                $baseSha, 
-                $startSha, 
-                $headSha, 
-                $newPath, 
-                $newLine, 
+                $this->getProjectId(),
+                (string) $mrId,
+                $baseSha,
+                $startSha,
+                $headSha,
+                $newPath,
+                $newLine,
                 $commentBody
             );
 
@@ -212,7 +212,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
             }
         } else {
             // Fallback to general note
-	    $this->executeGitlabMrNote($mrId, $commentBody);
+            $this->executeGitlabMrNote($mrId, $commentBody);
         }
 
         return true;
@@ -239,7 +239,7 @@ Only entities under the \App namespace will be analyzed. Always check that class
     ]
     public function executeGitlabMrNote(string|int $mrId, string $commentBody)
     {
-        $success = $this->gitlabApi->postGeneralMRComment($this->getProjectId(), (string)$mrId, $commentBody);
+        $success = $this->gitlabApi->postGeneralMRComment($this->getProjectId(), (string) $mrId, $commentBody);
 
         if ($success) {
             $this->current_context .= "=== General note posted successfully to MR ID $mrId ===\n";

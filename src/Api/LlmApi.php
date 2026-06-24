@@ -75,17 +75,11 @@ class LlmApi
     public function send(array $context, array $tools = []): array
     {
         $url = $this->baseUrl.'/chat/completions';
-        // // echo "URL $url\n";
-
-        $messages = [];
-        foreach ($context as $key => $contextElement) {
-            $messages[] = ['role' => $key ? 'user' : 'system', 'content' => $contextElement];
-        }
 
         // 2. Формирование полезной нагрузки (payload)
         $payload = [
             'model' => $this->model,
-            'messages' => $messages,
+            'messages' => $context,
             'stream' => false,
             'seed' => 666,
         ];
@@ -99,7 +93,7 @@ class LlmApi
             'Content-Type: application/json',
         ];
 
-        // echo "\n\nLLM REQUEST: " . json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n\n";
+        // echo "\n\nLLM REQUEST: " . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n";
 
         // 3. Выполнение запроса
         $response = $this->sendCurlRequest($url, $headers, $payload);

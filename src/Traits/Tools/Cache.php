@@ -116,7 +116,7 @@ trait Cache
     protected function getSavedFileList()
     {
         if (empty($this->saved_files)) {
-            return "";
+            return '';
         }
 
         $list = "=== **Cached files** ===\n";

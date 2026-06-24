@@ -120,14 +120,13 @@ trait ToolCallRouterTrait
 
     public function parseLlmResponse(array $response)
     {
-        $this->result = $response['content'] ?? null;
+        $this->result = $response['content'] ?? "\n";
 
         if (empty($response['tool_calls'])) {
             echo "\n\n----------------- No tool calls are returned, which means it has finished the task. ----------------------\n";
             echo "\n\n----------------- Here is the result: ----------------------\n";
 
             echo $response['content'] ?? "\n";
-            $this->result = $response['content'] ?? "\n";
 
             return false;
         }
@@ -152,12 +151,20 @@ trait ToolCallRouterTrait
 
             echo "------------------ Calling `$method` ---------------\n";
 
-            $this->current_context .= "** You have issued a tool call $function with args {".$this->compactJson($args)."}**\n";
+            // Clear storage for the tool call result
+            $this->current_context = '';
 
             // Execute the handler method
             if (! $this->$method(...$args)) {
                 return false;
             }
+
+            $this->add_context_item_ext([
+                'role' => 'tool',
+                'tool_call_id' => $toolCall['id'],
+                'name' => $function,
+                'content' => $this->current_context,
+            ]);
         }
 
         return true;

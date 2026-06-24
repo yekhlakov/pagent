@@ -131,8 +131,8 @@ class GitLabAPI
     /**
      * Retrieves the metadata for a specific Merge Request.
      *
-     * @param string $projectId The ID of the project.
-     * @param string $mergeRequestIid The IID of the merge request.
+     * @param  string  $projectId  The ID of the project.
+     * @param  string  $mergeRequestIid  The IID of the merge request.
      * @return array|null The metadata as an associative array, or null on failure.
      */
     public function getMRInfo(string $projectId, string $mergeRequestIid): string
@@ -145,6 +145,7 @@ class GitLabAPI
             return $this->makeRequest($url);
         } catch (\Throwable $t) {
             echo 'ERROR GETTING MR METADATA: '.$t->getMessage()."\n";
+
             return '';
         }
     }
@@ -152,8 +153,8 @@ class GitLabAPI
     /**
      * Retrieves the diff for a specific Merge Request.
      *
-     * @param string $projectId The ID of the project.
-     * @param string $mergeRequestIid The IID of the merge request.
+     * @param  string  $projectId  The ID of the project.
+     * @param  string  $mergeRequestIid  The IID of the merge request.
      * @return string The raw JSON response containing the diff, or an empty string on failure.
      */
     public function getMRDiff(string $projectId, string $mergeRequestIid): string
@@ -166,6 +167,7 @@ class GitLabAPI
             return $this->makeRequest($url);
         } catch (\Throwable $t) {
             echo 'ERROR GETTING MR DIFF: '.$t->getMessage()."\n";
+
             return '';
         }
     }
@@ -173,14 +175,14 @@ class GitLabAPI
     /**
      * Posts a comment to a specific line in a Merge Request diff.
      *
-     * @param string $projectId The ID of the project.
-     * @param string $mrId The IID of the merge request.
-     * @param string $baseSha The SHA of the base commit.
-     * @param string $startSha The SHA of the start commit.
-     * @param string $headSha The SHA of the head commit.
-     * @param string $newPath The path to the file.
-     * @param int $newLine The line number.
-     * @param string $commentBody The text content of the comment.
+     * @param  string  $projectId  The ID of the project.
+     * @param  string  $mrId  The IID of the merge request.
+     * @param  string  $baseSha  The SHA of the base commit.
+     * @param  string  $startSha  The SHA of the start commit.
+     * @param  string  $headSha  The SHA of the head commit.
+     * @param  string  $newPath  The path to the file.
+     * @param  int  $newLine  The line number.
+     * @param  string  $commentBody  The text content of the comment.
      * @return bool True on successful post, false otherwise.
      */
     public function postMRComment(
@@ -196,27 +198,29 @@ class GitLabAPI
         $url = "{$this->baseUrl}/projects/{$projectId}/merge_requests/{$mrId}/discussions";
 
         $payload = json_encode([
-            "body" => $commentBody,
-            "position" => [
-                "base_sha" => $baseSha,
-                "start_sha" => $startSha,
-                "head_sha" => $headSha,
-                "position_type" => "text",
-                "new_path" => $newPath,
-                "new_line" => $newLine
-            ]
+            'body' => $commentBody,
+            'position' => [
+                'base_sha' => $baseSha,
+                'start_sha' => $startSha,
+                'head_sha' => $headSha,
+                'position_type' => 'text',
+                'new_path' => $newPath,
+                'new_line' => $newLine,
+            ],
         ]);
 
-        echo "\n\nQuery gitlab POST comment $url with payload:\n" . $payload . "\n\n";
+        echo "\n\nQuery gitlab POST comment $url with payload:\n".$payload."\n\n";
 
         try {
-            // NOTE: Assuming a method exists (e.g., sendPostRequest) or makeRequest can be adapted 
+            // NOTE: Assuming a method exists (e.g., sendPostRequest) or makeRequest can be adapted
             // to handle POST requests with a body payload.
-            $response = $this->sendPostRequest($url, $payload); 
+            $response = $this->sendPostRequest($url, $payload);
+
             // Assuming $response is a boolean success indicator or empty string on failure
-            return !empty($response); 
+            return ! empty($response);
         } catch (\Throwable $t) {
             echo 'ERROR POSTING MR COMMENT: '.$t->getMessage()."\n";
+
             return false;
         }
     }
@@ -224,9 +228,9 @@ class GitLabAPI
     /**
      * Posts a general comment to a Merge Request (not tied to a specific line).
      *
-     * @param string $projectId The ID of the project.
-     * @param string $mrId The IID of the merge request.
-     * @param string $commentBody The text content of the comment.
+     * @param  string  $projectId  The ID of the project.
+     * @param  string  $mrId  The IID of the merge request.
+     * @param  string  $commentBody  The text content of the comment.
      * @return bool True on successful post, false otherwise.
      */
     public function postGeneralMRComment(
@@ -237,16 +241,18 @@ class GitLabAPI
         $url = "{$this->baseUrl}/projects/{$projectId}/merge_requests/{$mrId}/notes";
 
         // Change payload to form-data: body=URLENCODED_COMMENT_TEXT_HERE
-        $payload = "body=" . urlencode($commentBody);
+        $payload = 'body='.urlencode($commentBody);
 
-        echo "\n\nQuery gitlab POST general MR comment $url with payload:\n" . $payload . "\n\n";
+        echo "\n\nQuery gitlab POST general MR comment $url with payload:\n".$payload."\n\n";
 
         try {
             // Pass the payload and specify the content type for form data
-            $response = $this->sendPostRequest($url, $payload); 
-            return !empty($response); 
+            $response = $this->sendPostRequest($url, $payload);
+
+            return ! empty($response);
         } catch (\Throwable $t) {
             echo 'ERROR POSTING GENERAL MR COMMENT: '.$t->getMessage()."\n";
+
             return false;
         }
     }
@@ -260,25 +266,24 @@ class GitLabAPI
     }
 
     /**
-     * Placeholder for sending a POST request. This assumes the underlying CurlTrait 
+     * Placeholder for sending a POST request. This assumes the underlying CurlTrait
      * supports sending data and setting the method to POST.
-     * 
-     * @param string $url The target URL.
-     * @param string $payload The request body.
-     * @param string $contentType The content type of the payload (e.g., application/json, application/x-www-form-urlencoded).
+     *
+     * @param  string  $url  The target URL.
+     * @param  string  $payload  The request body.
+     * @param  string  $contentType  The content type of the payload (e.g., application/json, application/x-www-form-urlencoded).
      */
     private function sendPostRequest(string $url, string $payload, ?string $contentType = null): string|false
     {
-        $headers = ["PRIVATE-TOKEN: " . $this->accessToken];
-	if (!empty($contentType)) {
-		$headers[] = "Content-Type: " . $contentType;
-	}
+        $headers = ['PRIVATE-TOKEN: '.$this->accessToken];
+        if (! empty($contentType)) {
+            $headers[] = 'Content-Type: '.$contentType;
+        }
 
         $extraOptions = [CURLOPT_FOLLOWLOCATION => true, CURLOPT_POST => true, CURLOPT_POSTFIELDS => $payload];
 
         return $this->sendCurlRequest($url, $headers, $payload, $extraOptions, false);
     }
-
 
     /**
      * Получает имя ветки по хэшу коммита с мемоизацией

@@ -39,6 +39,8 @@ class Agent
 
     private string $current_context = '';
 
+    private array $context = [];
+
     private ?string $result = '';
 
     public function getResult()
@@ -106,10 +108,10 @@ If the information provided to you by the user is insufficient to perform your t
 
         // 1. Initialize APIs
 
-	$this->bitbucketApi = new BitbucketApi(
+        $this->bitbucketApi = new BitbucketApi(
             $this->config['bitbucket']['baseUrl'],
             $this->config['bitbucket']['accessToken']
-	);
+        );
 
         $this->gitlabApi = new GitlabApi(
             $this->config['gitlab']['baseUrl'],
@@ -181,6 +183,16 @@ If the information provided to you by the user is insufficient to perform your t
         return json_encode($unpacked, JSON_UNESCAPED_UNICODE);
     }
 
+    public function add_context_item(string $role, string $content)
+    {
+        $this->context[] = ['role' => $role, 'content' => $content];
+    }
+
+    public function add_context_item_ext(array $item)
+    {
+        $this->context[] = $item;
+    }
+
     /**
      * Executes the agent's logic loop based on the initial query.
      *
@@ -189,10 +201,14 @@ If the information provided to you by the user is insufficient to perform your t
      */
     public function handle(string $query)
     {
+        $this->user_task = $query;
+
         // Reset the context
         $this->current_context = '';
-
-        $this->user_task = $query;
+        $this->context = [
+            ['role' => 'system', 'content' => $this->system_prompt],
+            ['role' => 'user', 'content' => $this->user_task],
+        ];
 
         $queryCount = 0;
 
@@ -208,29 +224,17 @@ If the information provided to you by the user is insufficient to perform your t
         // The loop continues as long as the command router returns a non-empty result.
         while (true) {
 
-            $currentQuery = \array_filter([
-                $this->system_prompt,
-                $this->getSavedFileList(),
-                $this->user_task,
-                $this->current_context,
-            ]);
-
-            // echo "Agent Query #$queryCount: " . json_encode($currentQuery, JSON_UNESCAPED_UNICODE) . "\n\n";
-
             echo "--------------- Agent {$this->id} is issuing query to LLM ---------------\n";
 
             // 1. Call LLM API
-            $result = $this->llmApi->send($currentQuery, $localToolSet);
+            $result = $this->llmApi->send($this->context, $localToolSet);
 
             $queryCount++;
 
             echo "--------------- Agent {$this->id} is processing LLM response ---------------\n";
 
-            // Add reasoning to the context
-            $reasoning = $result['reasoning_content'] ?? '';
-            if (! empty($reasoning)) {
-                $this->current_context .= '**You reasoned**: '.$reasoning."\n";
-            }
+            // 2. Add the message to context
+            $this->add_context_item_ext($result);
 
             // 3. Process the response
             $routerResult = $this->parseLlmResponse($result);

@@ -20,9 +20,9 @@ trait Bitbucket
                         'type' => 'object',
                         'properties' => [
                             'names' => [
-                                'type' => 'array', 
-                                'items' => ['type' => 'string'], 
-                                'description' => 'Array of fully qualified names of the classes (interface etc) or file paths to retrieve, e.g., ["App\\Handlers\\DefaultHandler", "app/Services/AnotherService.php"]'
+                                'type' => 'array',
+                                'items' => ['type' => 'string'],
+                                'description' => 'Array of fully qualified names of the classes (interface etc) or file paths to retrieve, e.g., ["App\\Handlers\\DefaultHandler", "app/Services/AnotherService.php"]',
                             ],
                         ],
                         'required' => ['names'],

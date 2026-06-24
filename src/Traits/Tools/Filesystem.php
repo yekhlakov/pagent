@@ -93,13 +93,11 @@ trait Filesystem
         // Filter out '.' and '..' and categorize entries
         $filteredEntries = array_diff($entries, ['.', '..']);
 
-
-	$rootDir = $this->config['filesystem']['root_directory'] ?? getcwd();
+        $rootDir = $this->config['filesystem']['root_directory'] ?? getcwd();
 
         foreach ($filteredEntries as $entryName) {
-	
-            $fullPath = $absolutePath.'/'.$entryName;
 
+            $fullPath = $absolutePath.'/'.$entryName;
 
             if (is_dir($fullPath)) {
                 $directories[] = str_replace($rootDir, '', $fullPath);
