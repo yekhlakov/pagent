@@ -98,7 +98,7 @@ class Agent
 
         $systemPromptFile = $this->config['agent']['system-prompt-file'] ?? 'config/system-prompt.txt';
         if (is_file($systemPromptFile)) {
-            $this->system_prompt = file_get_contents($isFile);
+            $this->system_prompt = file_get_contents($systemPromptFile);
         } else {
             $this->system_prompt = $this->config['agent']['system-prompt']
                 ?? 'You are an AI agent acting as an experienced programmer / system analyst / business analyst / technical writer.

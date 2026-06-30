@@ -32,7 +32,7 @@ trait Vcs
     protected function getVcsFile($api, $name)
     {
 
-        $fileName = $this->getFileNameFromClassName($className);
+        $fileName = $this->getFileNameFromClassName($name);
 
         $errorMessage = "!!! Source code for $className you requested is unavailable! Check if you have provided correct (fully qualified) class name with correct namespace !!!";
         $classMessage = "=== Source code for $className ===";

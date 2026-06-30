@@ -34,7 +34,7 @@ trait Bitbucket
     public function executeBitbucketFile(array $names)
     {
         foreach ($names as $name) {
-            $this->current_context .= $this->getVcsFile($this->gitlabApi, $name);
+            $this->current_context .= $this->getVcsFile($this->bitbucketApi, $name);
         }
 
         return true;
