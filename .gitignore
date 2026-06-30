@@ -5,4 +5,5 @@ jobs
 output/*
 file-cache.json
 pint.json
+tmp
 vendor
