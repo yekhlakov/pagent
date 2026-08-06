@@ -13,9 +13,11 @@
             "email": "yekhlakov@gmail.com"
         }
     ],
+
     "require": {
         "php-code-archeology/php-code-archeology": "^2.11",
-        "laravel/pint": "^1.29"
+        "laravel/pint": "^1.29",
+        "vimeo/psalm": "^6.16"
     },
     "config": {
         "allow-plugins": {
